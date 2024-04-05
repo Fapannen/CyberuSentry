@@ -5,7 +5,7 @@ CyberuSentry is a mixture of 4 words which describe the nature of this project.
   - [Cyber](https://dictionary.cambridge.org/dictionary/english/cyber) - Involving, using, or relating to computers 
   - [Cerberus](https://en.wikipedia.org/wiki/Cerberus) - A three-headed guardian dog from the Greek mythology
   - [Sentry](https://dictionary.cambridge.org/dictionary/english/sentry) - A soldier who guards a place, usually by standing at its entrance
-  - Entry - This system monitors the entries to the designated place
+  - [Entry](https://dictionary.cambridge.org/dictionary/english/entry) - The act of entering a place
 
 CyberuSentry is a system that detects customer frauds in accomodation booking. When renting a place to stay, such as via AirBnb or Booking.com, the customers sometimes declare that X people will be staying
 at the place, only to find out that there were actually Y people ( Y > X ) staying at the place. This results in financial loss for the renter, but it is difficult to prove that there were more people than
