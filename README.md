@@ -13,9 +13,9 @@ declared. CyberuSentry should serve as a tool to assess the amount of unique peo
 originally declared.
 
 CyberuSentry uses a neural network to determine how many people visited the accomodation during a specific time frame. Note that the system **does not perform Face Recognition**, it only performs **Face Detection**. 
-The main difference is that unlike Face Recognition, Face Detection does not connect the face to any personal data and thus the identity of the person is completely irrelevant. As such, the system should be safe to use
-in accomodation renting, of course by placing the surveillance camera to a neutral place where it does not invade personal privacy. The guests should also be informed about the fact that there is such a system in place
-to avoid potential disputes.
+The main difference is that unlike Face Recognition, Face Detection does not connect the face to any personal data and thus the identity of the person is not known and is completely irrelevant. As such, the system
+should be safe to use in accomodation renting, of course by placing the surveillance camera to a neutral place where it does not invade personal privacy. The guests should also be informed about the fact that there
+is such a system in place to avoid potential disputes.
 
 # Sources
 - Images were generated using [Gencraft](https://gencraft.com/) website. All images used were created under a paid subscription.
