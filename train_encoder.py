@@ -58,6 +58,10 @@ def main(cfg : DictConfig):
             if epochs_without_improvement >= cfg.epochs_without_improvement:
                 print(f"No improvement for {cfg.epochs_without_improvement} epochs. Terminating.")
                 torch.save(encoder.state_dict(), cfg.best_model_path)
+                return
+        
+        if epoch % 10 == 0:
+            torch.save(encoder.state_dict(), f"model-{epoch}-{epoch_loss}.")
             
 
 if __name__ == "__main__":
