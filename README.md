@@ -20,3 +20,4 @@ is such a system in place to avoid potential disputes.
 # Sources
 - Images were generated using [Gencraft](https://gencraft.com/) website. All images used were created under a paid subscription.
 - [Cambridge Dictionary](https://dictionary.cambridge.org/)
+- Sample video from [Pexels](https://www.pexels.com/video/video-of-people-walking-855564/)
