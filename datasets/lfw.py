@@ -7,7 +7,7 @@ from utils.image import read_image
 
 
 class LFWDataset(Dataset):
-	""" Labeled Faces in the Wild dataset from Kaggle
+	"""Labeled Faces in the Wild dataset from Kaggle
 	https://www.kaggle.com/datasets/atulanandjha/lfwpeople/data
 	"""
 	def __init__(self, path_to_dataset_dir):
@@ -30,38 +30,48 @@ class LFWDataset(Dataset):
     	# Represent one epoch as one cycle per each "usable" identity
 		return self.num_mto_indentities
 
-	def get_same_identity_tuple(self, origin_identity : str):
- 		"""
- 		Construct a training sample from a given identity.
-
- 		origin_identity is a key into the self.identities dictionary
+	def get_same_identity_tuple(self, origin_identity: str) -> tuple[str, str]:
+		"""Construct a training sample from a given identity.
 
  		returns two images of the same identity
- 		"""
- 		identity_samples = self.identities[origin_identity]
- 		sample1 = random.choice(identity_samples)
- 		sample2 = random.choice([s for s in identity_samples if s != sample1])
- 		return sample1, sample2
 
-	def get_different_identity(self, origin_identity : str):
- 		"""
- 		Get one sample of a different identity than was used to
- 		construct a positive tuple for training.
+		Args:
+			origin_identity (str): Key into the self.identities dictionary
 
- 		Note that here we can utilize both 'mto' and 'o'
- 		"""
- 		different_identity = random.choice([identity for identity in self.identities if identity != origin_identity])
-
- 		return random.choice(self.identities[different_identity])
-
-	def __getitem__(self, idx):
+		Returns:
+			tuple: Paths to two separate images of a single identity
 		"""
-		Returns a training tuple for triplet loss
+		identity_samples = self.identities[origin_identity]
+		sample1 = random.choice(identity_samples)
+		sample2 = random.choice([s for s in identity_samples if s != sample1])
+		return sample1, sample2
 
-		pos_img1, pos_img2, neg_img
+	def get_different_identity(self, origin_identity : str) -> str:
+		"""Get one sample of a different identity than was used to
+ 		construct a positive tuple for training. Note that here we
+		can utilize both 'mto' and 'o'
+
+		Args:
+			origin_identity (str): A key into the self.identities dictionary
+
+		Returns:
+			str: Path to an image of a different identity
+		"""
+		different_identity = random.choice([identity for identity in self.identities if identity != origin_identity])
+
+		return random.choice(self.identities[different_identity])
+
+	def __getitem__(self, idx) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+		"""Returns a training tuple for triplet loss
 
 		positive images are images of the same identity, whereas
 		negative image is a different identity.
+
+		Args:
+			idx (_type_): Index of the training sample
+
+		Returns:
+			Tuple of torch.Tensors: (pos_img1, pos_img2, neg_img)
 		"""
 		origin_identity = self.mto_identities[idx]
 
