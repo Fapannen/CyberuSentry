@@ -12,6 +12,8 @@ class LFWDataset(Dataset):
 	"""
 	def __init__(self, path_to_dataset_dir):
 		self.dataset_dir = path_to_dataset_dir if path_to_dataset_dir.endswith("/") else path_to_dataset_dir + "/"
+		self.dataset_dir = os.path.normpath(self.dataset_dir) # Windows (: 
+		print(self.dataset_dir)
 
 		# Each directory has images of the same person
 		# Build a dictionary {name: [name_img_path1, name_img_path2, ...]}
