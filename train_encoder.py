@@ -23,10 +23,10 @@ def main(cfg : DictConfig):
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=cfg.batch_size, shuffle=True)
 
     epochs_without_improvement = 0
+    best_loss = torch.inf
 
     for epoch in range(cfg.epochs):
         epoch_loss = 0
-        best_loss = torch.inf
         for i, batch in enumerate(dataloader):
             optimizer.zero_grad()
 
