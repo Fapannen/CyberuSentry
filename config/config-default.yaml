@@ -9,3 +9,5 @@ defaults:
 
 batch_size: 32
 epochs: 100
+epochs_without_improvement: 10
+best_model_path: "best.ckpt"

@@ -14,23 +14,27 @@ def main(cfg : DictConfig):
     loss = hydra.utils.instantiate(cfg.loss.definition)
     optimizer = hydra.utils.instantiate(cfg.optimizer.definition, params = encoder.parameters())
 
-    # Dataset-specific definitions
-    dataset = hydra.utils.instantiate(cfg.datasets.definition[0]) # TODO: remove 0
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=cfg.batch_size, shuffle=True)
-
     # Transformations and augmentations
     augs = hydra.utils.instantiate(cfg.augmentations.definition)
     transforms = hydra.utils.instantiate(cfg.transforms.definition)
 
+    # Dataset-specific definitions
+    dataset = hydra.utils.instantiate(cfg.datasets.definition[0], augs=augs, transforms=transforms) # TODO: remove 0
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=cfg.batch_size, shuffle=True)
+
+    epochs_without_improvement = 0
+
     for epoch in range(cfg.epochs):
+        epoch_loss = 0
+        best_loss = torch.inf
         for i, batch in enumerate(dataloader):
             optimizer.zero_grad()
 
             pos1, pos2, neg = batch
             
-            pos1 = augs(transforms(pos1.to(device)))
-            pos2 = augs(transforms(pos2.to(device)))
-            neg = augs(transforms(neg.to(device)))
+            pos1 = pos1.to(device)
+            pos2 = pos2.to(device)
+            neg = neg.to(device)
 
             pos1_emb = encoder(pos1)
             pos2_emb = encoder(pos2)
@@ -41,7 +45,20 @@ def main(cfg : DictConfig):
 
             optimizer.step()
 
-            print(f"loss: {l.detach().cpu().item()}")
+            epoch_loss += l.detach().cpu().item()
+        
+        print(f"Epoch {epoch} loss: {epoch_loss}")
+
+        if epoch_loss < best_loss:
+            print(f"Loss improved from {best_loss} to {epoch_loss}")
+            best_loss = epoch_loss
+            epochs_without_improvement = 0
+        else:
+            epochs_without_improvement += 1
+            if epochs_without_improvement >= cfg.epochs_without_improvement:
+                print(f"No improvement for {cfg.epochs_without_improvement} epochs. Terminating.")
+                torch.save(encoder.state_dict(), cfg.best_model_path)
+            
 
 if __name__ == "__main__":
     main()

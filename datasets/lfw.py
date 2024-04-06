@@ -1,4 +1,5 @@
 import torch
+import torchvision
 import os
 import random
 
@@ -10,9 +11,14 @@ class LFWDataset(Dataset):
 	"""Labeled Faces in the Wild dataset from Kaggle
 	https://www.kaggle.com/datasets/atulanandjha/lfwpeople/data
 	"""
-	def __init__(self, path_to_dataset_dir):
+	def __init__(self, path_to_dataset_dir : str,
+				augs : torchvision.transforms.v2.Compose,
+				transforms : torchvision.transforms.v2.Compose,
+				train_split : float = 0.8,
+				validation_split : float = 0.2):
 		self.dataset_dir = path_to_dataset_dir if path_to_dataset_dir.endswith("/") else path_to_dataset_dir + "/"
-		print(self.dataset_dir)
+
+		# TODO: Implement splits
 
 		# Each directory has images of the same person
 		# Build a dictionary {name: [name_img_path1, name_img_path2, ...]}
@@ -26,6 +32,10 @@ class LFWDataset(Dataset):
 		# Identities with only one sample
 		self.o_identities = [identity for identity in self.identities if len(self.identities[identity]) == 1]
 		self.num_o_identities = self.num_identities - self.num_mto_identities
+
+		# Augmentations and transformations
+		self.augs = augs
+		self.transforms = transforms
 
 	def __len__(self):
     	# Represent one epoch as one cycle per each "usable" identity
@@ -85,5 +95,9 @@ class LFWDataset(Dataset):
 		pos_img_1 = read_image(pos_img_1)
 		pos_img_2 = read_image(pos_img_2)
 		neg_img = read_image(neg_img)
+
+		pos_img_1 = self.transforms(self.augs(pos_img_1))
+		pos_img_2 = self.transforms(self.augs(pos_img_2))
+		neg_img = self.transforms(self.augs(neg_img))
 
 		return pos_img_1, pos_img_2, neg_img
