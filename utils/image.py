@@ -14,6 +14,6 @@ def read_image(path, convert_to_tensor : bool = True) -> np.ndarray | torch.Tens
 	image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 	image = image / 255.0
 
-	image = torch.from_numpy(image).permute(2, 0, 1) if convert_to_tensor else image
+	image = torch.from_numpy(image).permute(2, 0, 1).float() if convert_to_tensor else image
 
 	return image

@@ -12,7 +12,6 @@ class LFWDataset(Dataset):
 	"""
 	def __init__(self, path_to_dataset_dir):
 		self.dataset_dir = path_to_dataset_dir if path_to_dataset_dir.endswith("/") else path_to_dataset_dir + "/"
-		self.dataset_dir = os.path.normpath(self.dataset_dir) # Windows (: 
 		print(self.dataset_dir)
 
 		# Each directory has images of the same person
@@ -22,15 +21,15 @@ class LFWDataset(Dataset):
 
 		# Identities with more than one image samples
 		self.mto_identities = [identity for identity in self.identities if len(self.identities[identity]) > 1]
-		self.num_mto_indentities = len(self.mto_identities)
+		self.num_mto_identities = len(self.mto_identities)
 
 		# Identities with only one sample
 		self.o_identities = [identity for identity in self.identities if len(self.identities[identity]) == 1]
-		self.num_o_identities = self.num_identities - self.num_mto_indentities
+		self.num_o_identities = self.num_identities - self.num_mto_identities
 
 	def __len__(self):
     	# Represent one epoch as one cycle per each "usable" identity
-		return self.num_mto_indentities
+		return self.num_mto_identities
 
 	def get_same_identity_tuple(self, origin_identity: str) -> tuple[str, str]:
 		"""Construct a training sample from a given identity.
@@ -63,7 +62,7 @@ class LFWDataset(Dataset):
 
 		return random.choice(self.identities[different_identity])
 
-	def __getitem__(self, idx) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+	def __getitem__(self, idx):
 		"""Returns a training tuple for triplet loss
 
 		positive images are images of the same identity, whereas

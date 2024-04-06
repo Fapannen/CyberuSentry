@@ -1,0 +1,2 @@
+definition:
+  _target_: torch.nn.TripletMarginLoss

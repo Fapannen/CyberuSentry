@@ -1,0 +1,11 @@
+definition:
+  _target_: torchvision.transforms.v2.Compose
+  transforms:
+    - _target_: torchvision.transforms.v2.RandomHorizontalFlip
+      p: 0.5
+    - _target_: torchvision.transforms.v2.RandomApply
+      transforms:
+        - _target_: torchvision.transforms.v2.GaussianBlur
+          kernel_size: 5
+      p: 0.5
+    

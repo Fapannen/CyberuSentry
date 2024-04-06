@@ -9,7 +9,6 @@ class SentryEncoder(nn.Module):
         self.conv2 = nn.Conv2d(64, 64, 3)
         self.conv3 = nn.Conv2d(64, 128, 3)
         self.conv4 = nn.Conv2d(128, 128, 3)
-        self.conv5 = nn.Conv2d(128, 256, 3)
 
         self.maxpool = nn.MaxPool2d(3)
         self.activation = nn.LeakyReLU()
@@ -39,10 +38,6 @@ class SentryEncoder(nn.Module):
         x = self.activation(x)
 
         x = self.conv4(x)
-        x = self.maxpool(x)
-        x = self.activation(x)
-
-        x = self.conv5(x)
         x = self.maxpool(x)
         x = self.activation(x)
 
