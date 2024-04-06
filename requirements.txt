@@ -4,3 +4,4 @@ opencv-python
 numpy
 tqdm
 facenet-pytorch # Pretrained face detector
+hydra-core      # Hydra config
