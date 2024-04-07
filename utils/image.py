@@ -2,7 +2,6 @@ import cv2
 import torch
 import numpy as np
 
-
 def read_image(
     path, convert_to_tensor: bool = True, scale: bool = True
 ) -> np.ndarray | torch.Tensor:
@@ -31,7 +30,57 @@ def read_image(
 		image = image / 255.0
 
 	image = (
-        torch.from_numpy(image).permute(2, 0, 1).float() if convert_to_tensor else image
+    	numpy_to_model_format(image) if convert_to_tensor else image
     )
 
+	return image
+
+def numpy_to_model_format(image : np.ndarray, add_batch_dim : bool = False) -> torch.Tensor:
+	"""Convert a numpy image to a torch Tensor.
+	Includes:
+		- Scaling to [0, 1] if the passed image is not yet scaled
+		- Resize to the model's input size
+		- Conversion from ndarray to Tensor
+		- HWC -> CHW
+		- Conversion to float
+		- Optional adding of batch dimension
+
+	Args:
+		image (np.ndarray): Image as a numpy array. Expects to already be
+							in BGR and HWC format.
+	
+	Returns:
+		torch.Tensor : processed image in Tensor format, ready to
+					   be consumed by the model.
+	"""
+	input_size = (256, 256)
+	
+	image = cv2.resize(image, input_size)
+
+	if np.max(image) > 1:
+		image = image / 255.0
+	
+	image = torch.from_numpy(image)
+	image = image.permute(2, 0, 1).float()
+
+	if add_batch_dim:
+		image = image.unsqueeze(0)
+	
+	return image
+
+def model_format_to_numpy(image: torch.Tensor) -> np.ndarray:
+	"""Convert Tensor represented image to numpy representation
+
+	Args:
+		image (torch.Tensor): Image in Tensor format. Can be batched.
+
+	Returns:
+		np.ndarray: Image in np.ndarray format in HWC, uint8
+	"""
+	# Squeeze batch dimension. If there is none, this will do
+	# nothing
+	image = image.squeeze(0)
+
+	image = image.permute(1, 2, 0).numpy() * 255
+	image = image.astype(np.uint8)
 	return image

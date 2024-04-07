@@ -4,7 +4,11 @@ import argparse
 import cv2
 import numpy as np
 
-from utils.image import read_image
+from utils.image import (
+    read_image,
+    numpy_to_model_format,
+    model_format_to_numpy
+) 
 from utils.model import restore_model
 
 
@@ -52,14 +56,7 @@ def get_cropped_faces(detected_faces, image):
 
         crop = image[new_bb_ymin:new_bb_ymax, new_bb_xmin:new_bb_xmax, :]
 
-        # Prepare for feeding into the network
-        preprocessed_crop = cv2.resize(crop, (256, 256))
-        preprocessed_crop = preprocessed_crop / 255.0
-        preprocessed_crop = torch.from_numpy(preprocessed_crop)
-        preprocessed_crop = preprocessed_crop.permute(2, 0, 1).float()
-        preprocessed_crop = preprocessed_crop.unsqueeze(0)
-
-        cropped_faces.append(preprocessed_crop)
+        cropped_faces.append(crop)
 
     return cropped_faces
 
@@ -95,7 +92,11 @@ def run_inference_images(model_path: str, img1: str, img2: str):
 
     img1_faces_cropped = get_cropped_faces(img1_faces, img1)
     img2_faces_cropped = get_cropped_faces(img2_faces, img2)
+
     faces_cropped = img1_faces_cropped + img2_faces_cropped
+    faces_cropped = list(
+        map(lambda x: numpy_to_model_format(x, add_batch_dim=True), faces_cropped)
+    )
 
     model = restore_model(model_path, device="cpu")
     model.eval()
@@ -109,7 +110,7 @@ def run_inference_images(model_path: str, img1: str, img2: str):
         rest = [faces_mapped[j] for j in range(face_i + 1, len(faces_mapped))]
         face1_idx, face1_cropped, face1_embed = faces_mapped[face_i]
 
-        face_image_numpy = face1_cropped.squeeze(0).permute(1, 2, 0).numpy() * 255
+        face_image_numpy = model_format_to_numpy(face1_cropped)
 
         # Write the image to be able to identify the faces individually
         cv2.imwrite(

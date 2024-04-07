@@ -1,3 +1,5 @@
 definition:
   _target_: encoder.default_encoder.SentryEncoder
   embedding_dim: 512
+
+input_size: [256, 256]
