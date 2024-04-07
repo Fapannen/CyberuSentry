@@ -68,7 +68,7 @@ def main(cfg: DictConfig):
 
         # Run validation
         if epoch % cfg.validation_interval == 0:
-            val_loss = torch.inf
+            val_loss = 0
             encoder.eval()
             for _, batch in enumerate(
                 tqdm(val_dataloader, desc=f"epoch {epoch} val loop")
