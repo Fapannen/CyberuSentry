@@ -2,8 +2,9 @@ import torch
 import hydra
 from omegaconf import DictConfig
 
+
 @hydra.main(config_path="config", config_name="config-default", version_base=None)
-def main(cfg : DictConfig):
+def main(cfg: DictConfig):
 
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -11,16 +12,22 @@ def main(cfg : DictConfig):
 
     # Encoder-specific definitions
     encoder = hydra.utils.instantiate(cfg.encoder.definition).to(device)
-    loss = hydra.utils.instantiate(cfg.loss.definition)
-    optimizer = hydra.utils.instantiate(cfg.optimizer.definition, params = encoder.parameters())
+    loss_fn = hydra.utils.instantiate(cfg.loss.definition)
+    optimizer = hydra.utils.instantiate(
+        cfg.optimizer.definition, params=encoder.parameters()
+    )
 
     # Transformations and augmentations
     augs = hydra.utils.instantiate(cfg.augmentations.definition)
     transforms = hydra.utils.instantiate(cfg.transforms.definition)
 
     # Dataset-specific definitions
-    dataset = hydra.utils.instantiate(cfg.datasets.definition[0], augs=augs, transforms=transforms) # TODO: remove 0
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=cfg.batch_size, shuffle=True)
+    dataset = hydra.utils.instantiate(
+        cfg.datasets.definition[0], augs=augs, transforms=transforms
+    )  # TODO: remove 0
+    dataloader = torch.utils.data.DataLoader(
+        dataset, batch_size=cfg.batch_size, shuffle=True
+    )
 
     epochs_without_improvement = 0
     best_loss = torch.inf
@@ -31,7 +38,7 @@ def main(cfg : DictConfig):
             optimizer.zero_grad()
 
             pos1, pos2, neg = batch
-            
+
             pos1 = pos1.to(device)
             pos2 = pos2.to(device)
             neg = neg.to(device)
@@ -40,13 +47,13 @@ def main(cfg : DictConfig):
             pos2_emb = encoder(pos2)
             neg_emb = encoder(neg)
 
-            l = loss(pos1_emb, pos2_emb, neg_emb)
-            l.backward()
+            loss = loss_fn(pos1_emb, pos2_emb, neg_emb)
+            loss.backward()
 
             optimizer.step()
 
-            epoch_loss += l.detach().cpu().item()
-        
+            epoch_loss += loss.detach().cpu().item()
+
         print(f"Epoch {epoch} loss: {epoch_loss}")
 
         if epoch_loss < best_loss:
@@ -56,13 +63,15 @@ def main(cfg : DictConfig):
         else:
             epochs_without_improvement += 1
             if epochs_without_improvement >= cfg.epochs_without_improvement:
-                print(f"No improvement for {cfg.epochs_without_improvement} epochs. Terminating.")
+                print(
+                    f"No improvement for {cfg.epochs_without_improvement} epochs. Terminating."
+                )
                 torch.save(encoder.state_dict(), cfg.best_model_path)
                 return
-        
+
         if epoch % 10 == 0:
             torch.save(encoder.state_dict(), f"model-{epoch}-{epoch_loss}.")
-            
+
 
 if __name__ == "__main__":
     main()

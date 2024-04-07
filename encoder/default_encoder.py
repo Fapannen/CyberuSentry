@@ -46,5 +46,5 @@ class SentryEncoder(nn.Module):
         x = self.activation(x)
         x = self.fc2(x)
         x = self.sigmoid(x)
-    
+
         return x
