@@ -3,24 +3,38 @@ import torchvision
 import os
 import random
 
+from pathlib import Path
 from typing import Literal
 from torch.utils.data import Dataset
 from utils.image import read_image
 
 
-class LFWDataset(Dataset):
-    """Labeled Faces in the Wild dataset from Kaggle
-    https://www.kaggle.com/datasets/atulanandjha/lfwpeople/data
+class CelebADataset(Dataset):
+    """CelebA dataset
+    https://mmlab.ie.cuhk.edu.hk/projects/CelebA.html
     """
 
     def __init__(
         self,
         path_to_dataset_dir: str,
-        augs: torchvision.transforms.v2.Compose,
+        path_to_identity_annotations: str,
+        augs: torchvision.transforms.v2.Compose | None,
         transforms: torchvision.transforms.v2.Compose,
         split: Literal["train", "val"],
         train_split: float = 0.8,
     ):
+        """CelebA Dataset
+
+        Args:
+            path_to_dataset_dir (str): Path to the directory containing the images
+            path_to_identity_annotations (str): Path to the identity annotations file
+            augs (torchvision.transforms.v2.Compose | None): Optional augmentations.
+                                                             Can be None in validation
+            transforms (torchvision.transforms.v2.Compose): Transformations to apply
+                                                            to images
+            split ("train" / "val"): Which split is being run
+            train_split: train/val ratio.
+        """
         self.dataset_dir = (
             path_to_dataset_dir
             if path_to_dataset_dir.endswith("/")
@@ -29,17 +43,37 @@ class LFWDataset(Dataset):
 
         # TODO: Implement splits
 
-        # Each directory has images of the same person
-        # Build a dictionary {name: [name_img_path1, name_img_path2, ...]}
+        # Dataset consists of 202 599 images across 10 177 identities.
+        # Images do not have any naming and go from 00000.jpg to max.jpg
+        # The identity annotations are provided in a separate file of form
+        # <image_name> <identity_id>
+        # Build a dictionary {id: [name_img_path1, name_img_path2, ...]}
+
+        self.identities = {}
+        with open(path_to_identity_annotations, "r") as annotations_file:
+            for line in annotations_file.readlines():
+                image_path, identity = line.replace("\n", "").split(" ")
+                identity = int(identity)
+
+                if identity not in self.identities:
+                    self.identities[identity] = [self.dataset_dir + image_path]
+                else:
+                    self.identities[identity].append(self.dataset_dir + image_path)
+
+        # Build a train / val split
+        self.split = split
+        identities = list(self.identities.keys())
+        num_identities = len(identities)
+
+        split_identities = (
+            identities[: int(train_split * num_identities)]
+            if split == "train"
+            else identities[int(train_split * num_identities) :]
+        )
+
         self.identities = {
-            f: [
-                self.dataset_dir + f + "/" + file
-                for file in os.listdir(self.dataset_dir + f)
-            ]
-            for f in os.listdir(self.dataset_dir)
-            if os.path.isdir(self.dataset_dir + f)
+            k: v for k, v in self.identities.items() if k in split_identities
         }
-        self.num_identities = len(self.identities)
 
         # Identities with more than one image samples
         self.mto_identities = [
@@ -48,14 +82,6 @@ class LFWDataset(Dataset):
             if len(self.identities[identity]) > 1
         ]
         self.num_mto_identities = len(self.mto_identities)
-
-        # Identities with only one sample
-        self.o_identities = [
-            identity
-            for identity in self.identities
-            if len(self.identities[identity]) == 1
-        ]
-        self.num_o_identities = self.num_identities - self.num_mto_identities
 
         # Augmentations and transformations
         self.augs = augs
@@ -122,8 +148,13 @@ class LFWDataset(Dataset):
         pos_img_2 = read_image(pos_img_2)
         neg_img = read_image(neg_img)
 
-        pos_img_1 = self.transforms(self.augs(pos_img_1))
-        pos_img_2 = self.transforms(self.augs(pos_img_2))
-        neg_img = self.transforms(self.augs(neg_img))
+        if self.split == "train":
+            pos_img_1 = self.augs(pos_img_1)
+            pos_img_2 = self.augs(pos_img_2)
+            neg_img = self.augs(neg_img)
+
+        pos_img_1 = self.transforms(pos_img_1)
+        pos_img_2 = self.transforms(pos_img_2)
+        neg_img = self.transforms(neg_img)
 
         return pos_img_1, pos_img_2, neg_img

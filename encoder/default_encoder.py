@@ -26,7 +26,6 @@ class SentryEncoder(nn.Module):
         """
 
         x = self.conv1(x)
-        x = self.maxpool(x)
         x = self.activation(x)
 
         x = self.conv2(x)
@@ -34,7 +33,6 @@ class SentryEncoder(nn.Module):
         x = self.activation(x)
 
         x = self.conv3(x)
-        x = self.maxpool(x)
         x = self.activation(x)
 
         x = self.conv4(x)
