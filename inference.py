@@ -2,6 +2,7 @@ import facenet_pytorch as fp
 import torch
 import argparse
 import cv2
+import numpy as np
 
 from utils.image import read_image
 from utils.model import restore_model
@@ -63,13 +64,27 @@ def get_cropped_faces(detected_faces, image):
     return cropped_faces
 
 
-def run_inference_images(model_path, img1, img2):
-    img1 = read_image(img1, convert_to_tensor=False, scale=False)
-    img2 = read_image(img2, convert_to_tensor=False, scale=False)
+def run_inference_images(model_path: str, img1: str, img2: str):
+    """Run inference on two images.
+    # TODO: Decide whether this function should work as is now or
+    whether it should output the number of unique faces ...
+
+    Args:
+        model_path (str): Path to the model checkpoint
+        img1 (str): Path to the first image
+        img2 (str): Path to the second image
+    """
+    img1: np.ndarray = read_image(img1, convert_to_tensor=False, scale=False)
+    img2: np.ndarray = read_image(img2, convert_to_tensor=False, scale=False)
 
     fp_model = fp.MTCNN()
 
     # Yields a tuple (bboxes, confidences)
+    # ie. ([[118.15, 93.5875, 498.784, 110.2]], [[98.587]])
+    # for a single detected face.
+    # bbox is a quadruple of floats representing the top-left
+    # and bottom-right coordinates of the bbox in the original
+    # image with no scaling
     img1_faces = fp_model.detect(img1)
     img2_faces = fp_model.detect(img2)
 
@@ -90,9 +105,9 @@ def run_inference_images(model_path, img1, img2):
         for i in range(len(faces_cropped))
     ]
 
-    for face1 in faces_mapped:
-        rest = [face for face in faces_mapped if face != face1]
-        face1_idx, face1_cropped, face1_embed = face1
+    for face_i in range(len(faces_mapped)):
+        rest = [faces_mapped[j] for j in range(face_i + 1, len(faces_mapped))]
+        face1_idx, face1_cropped, face1_embed = faces_mapped[face_i]
 
         face_image_numpy = face1_cropped.squeeze(0).permute(1, 2, 0).numpy() * 255
 
@@ -104,10 +119,11 @@ def run_inference_images(model_path, img1, img2):
         for face2 in rest:
             face2_idx, _, face2_embed = face2
             face_diff = torch.sum(face1_embed - face2_embed)
-            face_cossim = (torch.nn.CosineSimilarity()(face1_embed, face2_embed)).item()
+            cos_sim = torch.nn.CosineSimilarity()
+            face_cossim = (cos_sim(face1_embed, face2_embed)).item()
             print(
                 f"The difference of face {face1_idx} versus face {face2_idx} is {face_diff}"
-                f"and their cosine similarity is {face_cossim}"
+                f" and their cosine similarity is {face_cossim}"
             )
 
 
@@ -123,7 +139,6 @@ if __name__ == "__main__":
         "--video-path",
         action="store",
         dest="video_path",
-        default="vid/sample_video.mp4",
     )
     args = parser.parse_args()
 
@@ -136,4 +151,5 @@ if __name__ == "__main__":
     elif args.img1 is not None and args.img2 is not None:
         run_inference_images(args.model_path, args.img1, args.img2)
 
-    print("Unrecognized combination of arguments, exitting ...")
+    else:
+        print("Unrecognized combination of arguments, exitting ...")
