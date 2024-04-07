@@ -41,8 +41,6 @@ class CelebADataset(Dataset):
             else path_to_dataset_dir + "/"
         )
 
-        # TODO: Implement splits
-
         # Dataset consists of 202 599 images across 10 177 identities.
         # Images do not have any naming and go from 00000.jpg to max.jpg
         # The identity annotations are provided in a separate file of form
