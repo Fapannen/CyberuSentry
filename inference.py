@@ -4,11 +4,7 @@ import argparse
 import cv2
 import numpy as np
 
-from utils.image import (
-    read_image,
-    numpy_to_model_format,
-    model_format_to_numpy
-) 
+from utils.image import read_image, numpy_to_model_format, model_format_to_numpy
 from utils.model import restore_model
 
 
@@ -109,6 +105,7 @@ def run_inference_images(model_path: str, img1: str, img2: str):
     for face_i in range(len(faces_mapped)):
         rest = [faces_mapped[j] for j in range(face_i + 1, len(faces_mapped))]
         face1_idx, face1_cropped, face1_embed = faces_mapped[face_i]
+        print(face1_embed)
 
         face_image_numpy = model_format_to_numpy(face1_cropped)
 
@@ -119,7 +116,7 @@ def run_inference_images(model_path: str, img1: str, img2: str):
 
         for face2 in rest:
             face2_idx, _, face2_embed = face2
-            face_diff = torch.sum(face1_embed - face2_embed)
+            face_diff = torch.sum(torch.abs(face1_embed - face2_embed))
             cos_sim = torch.nn.CosineSimilarity()
             face_cossim = (cos_sim(face1_embed, face2_embed)).item()
             print(

@@ -5,7 +5,7 @@ defaults:
   - augmentations: default
   - transforms: default
   - loss: triplet
-  - optimizer: adamw
+  - optimizer: sgd
 
 batch_size: 32
 epochs: 100
