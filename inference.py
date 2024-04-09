@@ -28,24 +28,23 @@ def get_cropped_faces(detected_faces, image):
     """
     cropped_faces = []
     for face_bbox in detected_faces[0]:
-        print(face_bbox)
         xmin, ymin, xmax, ymax = face_bbox
 
         bb_xdiff = xmax - xmin
         bb_ydiff = ymax - ymin
 
-        new_bb_xmin = int(xmin - (bb_xdiff // 4))
+        new_bb_xmin = int(xmin - (bb_xdiff // 8))
         new_bb_xmin = new_bb_xmin if new_bb_xmin >= 0 else 0
 
-        new_bb_ymin = int(ymin - (bb_ydiff // 4))
+        new_bb_ymin = int(ymin - (bb_ydiff // 8))
         new_bb_ymin = new_bb_ymin if new_bb_ymin >= 0 else 0
 
-        new_bb_xmax = int(xmax + (bb_xdiff // 4))
+        new_bb_xmax = int(xmax + (bb_xdiff // 8))
         new_bb_xmax = (
             new_bb_xmax if new_bb_xmax < image.shape[1] else image.shape[1] - 1
         )
 
-        new_bb_ymax = int(ymax + (bb_ydiff // 4))
+        new_bb_ymax = int(ymax + (bb_ydiff // 8))
         new_bb_ymax = (
             new_bb_ymax if new_bb_ymax < image.shape[1] else image.shape[0] - 1
         )
