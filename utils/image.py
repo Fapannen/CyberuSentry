@@ -85,19 +85,18 @@ def numpy_to_model_format(
 
 
 def model_format_to_numpy(image: torch.Tensor) -> np.ndarray:
-	"""Convert Tensor represented image to numpy representation
+    """Convert Tensor represented image to numpy representation
 
-	Parameters
-	----------
-	image : torch.Tensor
-		Image in Tensor format. Can be batched.
+    Parameters
+    ----------
+    image : torch.Tensor
+            Image in Tensor format. Can be batched.
 
-	Returns
-	-------
-	np.ndarray
-		Image in np.ndarray format in HWC, uint8
-	"""
-    
+    Returns
+    -------
+    np.ndarray
+            Image in np.ndarray format in HWC, uint8
+    """
     # Squeeze batch dimension. If there is none, this will do
     # nothing
     image = image.squeeze(0)
