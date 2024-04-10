@@ -1,5 +1,5 @@
 definition:
   - _target_: datasets.celeba.CelebADataset
-    path_to_dataset_dir: C:/data/CelebA/img_align_celeba
+    path_to_dataset_dir: C:/data/CelebA/img_align_celeba_cropped
     path_to_identity_annotations: C:/data/CelebA/identity_CelebA.txt
     train_split: 0.8

@@ -21,8 +21,15 @@ class SentryEncoder(nn.Module):
     def forward(self, x):
         """Forward the inputs
 
-        Args:
-            x : Input to be forwarded
+        Parameters
+        ----------
+        x : torch.Tensor
+            input to be forwarded
+
+        Returns
+        -------
+        output
+            Processed input
         """
 
         x = self.conv1(x)

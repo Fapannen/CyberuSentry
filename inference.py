@@ -12,19 +12,28 @@ def run_inference_video():
     pass
 
 
-def get_cropped_faces(detected_faces, image):
-    """# Output from fp model is a tuple (bbox, confidence)
-    # ie. ([[tl_x, tl_y, br_x, br_y], [F2_tl_x, ...]], [[0.99], [0.45]])
-    # Dont forget that image is in shape (height, width)
+def get_cropped_faces(
+    detected_faces: tuple[list, list], image: np.ndarray
+) -> list[np.ndarray]:
+    """Create a list of faces that were cropped from the image
 
-    Args:
-        detected_faces (_type_): tuple [bboxes, confidences]
-        image (_type_): The original image from which to cut faces
+    Output from fp model is a tuple (bbox, confidence)
+    ie. ([[tl_x, tl_y, br_x, br_y], [F2_tl_x, ...]], [[0.99], [0.45]])
+    Dont forget that image is in shape (height, width)
 
-    Returns:
-        List of images: List of images representing the cut faces.
-                        The images are preprocessed to be properly
-                        fed into the encoder network.
+    Parameters
+    ----------
+    detected_faces : tuple [bboxes, confidences]
+        _description_
+    image : np.ndarray
+        The original image from which to cut faces
+
+    Returns
+    -------
+    List of images : list[np.ndarray]
+        List of images representing the cut faces.
+        The images are preprocessed to be properly
+        fed into the encoder network.
     """
     cropped_faces = []
     for face_bbox in detected_faces[0]:
@@ -57,14 +66,19 @@ def get_cropped_faces(detected_faces, image):
 
 
 def run_inference_images(model_path: str, img1: str, img2: str):
-    """Run inference on two images.
-    # TODO: Decide whether this function should work as is now or
-    whether it should output the number of unique faces ...
+    """Run inference on two images
 
-    Args:
-        model_path (str): Path to the model checkpoint
-        img1 (str): Path to the first image
-        img2 (str): Path to the second image
+    TODO: Decide whether the function should output the diffs or
+    the number of unique faces ...
+
+    Parameters
+    ----------
+    model_path : str
+        Full path to the model which shall be used as face encoder
+    img1 : str
+        Path to the first image
+    img2 : str
+        Path to the second image
     """
     img1: np.ndarray = read_image(img1, convert_to_tensor=False, scale=False)
     img2: np.ndarray = read_image(img2, convert_to_tensor=False, scale=False)
@@ -104,7 +118,6 @@ def run_inference_images(model_path: str, img1: str, img2: str):
     for face_i in range(len(faces_mapped)):
         rest = [faces_mapped[j] for j in range(face_i + 1, len(faces_mapped))]
         face1_idx, face1_cropped, face1_embed = faces_mapped[face_i]
-        print(face1_embed)
 
         face_image_numpy = model_format_to_numpy(face1_cropped)
 

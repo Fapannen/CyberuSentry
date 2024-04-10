@@ -8,16 +8,23 @@ def restore_model(
     """Load a model from a checkpoint and return the model as a runnable
     instance.
 
-    Args:
-        path_to_model (str): Full path to the model checkpoint
-        device (str, optional): On which torch.device to load Defaults to "cuda".
-        config_name (str, optional): Name of the config. Defaults to "config-default".
+    Parameters
+    ----------
+    path_to_model : str
+        Full path to the model checkpoint
+    device : str, optional
+        On which torch.device to load Defaults to "cuda".
+    config_name : str, optional
+        Name of the config. Defaults to "config-default"
 
-    Returns:
-        torch.nn.Module: Restored model for inference. Note that no '.eval()'
-                         is called here. Remember to do so when using this
-                         for inference.
+    Returns
+    -------
+    torch.nn.Module
+        Restored model for inference. Note that no '.eval()'
+        is called here. Remember to do so when using this
+        for inference.
     """
+
     hydra.initialize(version_base=None, config_path="../config")
     config = hydra.compose(config_name=config_name)
 

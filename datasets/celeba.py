@@ -23,17 +23,21 @@ class CelebADataset(Dataset):
         split: Literal["train", "val"],
         train_split: float = 0.8,
     ):
-        """CelebA Dataset
-
-        Args:
-            path_to_dataset_dir (str): Path to the directory containing the images
-            path_to_identity_annotations (str): Path to the identity annotations file
-            augs (torchvision.transforms.v2.Compose | None): Optional augmentations.
-                                                             Can be None in validation
-            transforms (torchvision.transforms.v2.Compose): Transformations to apply
-                                                            to images
-            split ("train" / "val"): Which split is being run
-            train_split: train/val ratio.
+        """
+        Parameters
+        ----------
+        path_to_dataset_dir : str
+            Path to the directory containing the images
+        path_to_identity_annotations : str
+            Path to the identity annotations file
+        augs : torchvision.transforms.v2.Compose | None
+            Optional augmentations. Can be None in validation
+        transforms : torchvision.transforms.v2.Compose
+            Transformations to apply to images
+        split : Literal["train", "val"]
+            Which split is being run
+        train_split : float, optional
+            train/val ratio, by default 0.8
         """
         self.dataset_dir = (
             path_to_dataset_dir
@@ -90,15 +94,17 @@ class CelebADataset(Dataset):
         return self.num_mto_identities
 
     def get_same_identity_tuple(self, origin_identity: str) -> tuple[str, str]:
-        """Construct a training sample from a given identity.
+        """Construct a tuple (img, img) of images of the same identity.
 
-        returns two images of the same identity
+        Parameters
+        ----------
+        origin_identity : str
+            Identifier of the identity to generate tuple from
 
-        Args:
-                origin_identity (str): Key into the self.identities dictionary
-
-        Returns:
-                tuple: Paths to two separate images of a single identity
+        Returns
+        -------
+        tuple[str, str]
+            Paths to two different images of the same identity
         """
         identity_samples = self.identities[origin_identity]
         sample1 = random.choice(identity_samples)
@@ -110,11 +116,15 @@ class CelebADataset(Dataset):
         construct a positive tuple for training. Note that here we
         can utilize both 'mto' and 'o'
 
-        Args:
-                origin_identity (str): A key into the self.identities dictionary
+        Parameters
+        ----------
+        origin_identity : str
+            Identity to exclude
 
-        Returns:
-                str: Path to an image of a different identity
+        Returns
+        -------
+        str
+            Path to an image of a different identity than was provided
         """
         different_identity = random.choice(
             [identity for identity in self.identities if identity != origin_identity]
@@ -128,11 +138,16 @@ class CelebADataset(Dataset):
         positive images are images of the same identity, whereas
         negative image is a different identity.
 
-        Args:
-                idx (_type_): Index of the training sample
+        Parameters
+        ----------
+        idx : _type_
+            Index of the item
 
-        Returns:
-                Tuple of torch.Tensors: (pos_img1, pos_img2, neg_img)
+        Returns
+        -------
+        _type_
+            A tuple (pos_img, pos_img2, neg_image) which is designed
+            to be used for triplet loss
         """
         origin_identity = self.mto_identities[idx]
 

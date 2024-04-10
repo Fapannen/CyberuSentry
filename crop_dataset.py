@@ -17,6 +17,13 @@ def crop_images_in_folder(src_path, dst_path):
     perhaps surroundings.
 
     The images retain their original name.
+
+    Parameters
+    ----------
+    src_path : str | Path
+        Path to the directory containing images to be cropped
+    dst_path : str | Path
+        Path to the directory where the results shall be saved
     """
     path_to_dataset = src_path
     output_path = Path(dst_path)

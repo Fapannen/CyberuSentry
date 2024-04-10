@@ -58,6 +58,7 @@ def main(cfg: DictConfig):
             neg_emb = encoder(neg)
 
             loss = loss_fn(pos1_emb, pos2_emb, neg_emb)
+            print(f"loss: {loss.detach().cpu().item()}")
             loss.backward()
 
             optimizer.step()
