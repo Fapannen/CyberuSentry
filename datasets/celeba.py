@@ -175,4 +175,5 @@ class CelebADataset(Dataset):
         pos_img = self.transforms(pos_img)
         neg_img = self.transforms(neg_img)
 
+        # TODO: Identities are probably not needed anymore
         return pos_img, origin_identity, neg_img, neg_identity
