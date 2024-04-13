@@ -93,6 +93,11 @@ class CelebADataset(Dataset):
         # Represent one epoch as one cycle per each "usable" identity
         return self.num_mto_identities
 
+    def get_identities(self):
+        # TODO: Add iterating over images per identity instead of
+        # just picking sth at random
+        return self.mto_identities.copy()
+
     def get_same_identity_tuple(self, origin_identity: str) -> tuple[str, str]:
         """Construct a tuple (img, img) of images of the same identity.
 
@@ -111,7 +116,10 @@ class CelebADataset(Dataset):
         sample2 = random.choice([s for s in identity_samples if s != sample1])
         return sample1, sample2
 
-    def get_different_identity(self, origin_identity: str) -> str:
+    def get_same_identity(self, identity: str) -> str:
+        return random.choice(self.identities[identity])
+
+    def get_different_identity(self, origin_identity: str) -> tuple[str, int]:
         """Get one sample of a different identity than was used to
         construct a positive tuple for training. Note that here we
         can utilize both 'mto' and 'o'
@@ -130,7 +138,7 @@ class CelebADataset(Dataset):
             [identity for identity in self.identities if identity != origin_identity]
         )
 
-        return random.choice(self.identities[different_identity])
+        return random.choice(self.identities[different_identity]), different_identity
 
     def __getitem__(self, idx):
         """Returns a training tuple for triplet loss
@@ -152,22 +160,19 @@ class CelebADataset(Dataset):
         origin_identity = self.mto_identities[idx]
 
         # Get tuple of the same identity
-        pos_img_1, pos_img_2 = self.get_same_identity_tuple(origin_identity)
+        pos_img = self.get_same_identity(origin_identity)
 
         # Get another identity
-        neg_img = self.get_different_identity(origin_identity)
+        neg_img, neg_identity = self.get_different_identity(origin_identity)
 
-        pos_img_1 = read_image(pos_img_1)
-        pos_img_2 = read_image(pos_img_2)
+        pos_img = read_image(pos_img)
         neg_img = read_image(neg_img)
 
         if self.split == "train":
-            pos_img_1 = self.augs(pos_img_1)
-            pos_img_2 = self.augs(pos_img_2)
+            pos_img = self.augs(pos_img)
             neg_img = self.augs(neg_img)
 
-        pos_img_1 = self.transforms(pos_img_1)
-        pos_img_2 = self.transforms(pos_img_2)
+        pos_img = self.transforms(pos_img)
         neg_img = self.transforms(neg_img)
 
-        return pos_img_1, pos_img_2, neg_img
+        return pos_img, origin_identity, neg_img, neg_identity

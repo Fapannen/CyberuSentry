@@ -3,6 +3,10 @@ import hydra
 from tqdm import tqdm
 from omegaconf import DictConfig
 
+from sampler.sampler import IdentitySampler
+
+from utils.triplet import build_triplets
+
 
 @hydra.main(config_path="config", config_name="config-default", version_base=None)
 def main(cfg: DictConfig):
@@ -30,35 +34,65 @@ def main(cfg: DictConfig):
         cfg.datasets.definition[0], augs=augs, transforms=transforms, split="val"
     )  # TODO: remove 0
     train_dataloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=cfg.batch_size, shuffle=True
+        train_dataset,
+        batch_sampler=IdentitySampler(
+            len(list(train_dataset.get_identities().keys())),
+            cfg.batch_size,
+            cfg.min_samples_per_id,
+        ),
     )
     val_dataloader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=cfg.batch_size, shuffle=True
+        val_dataset,
+        batch_sampler=IdentitySampler(
+            len(list(val_dataset.get_identities().keys())),
+            cfg.batch_size,
+            cfg.min_samples_per_id,
+        ),
     )
 
     validations_without_improvement = 0
     best_val_loss = torch.inf
 
     for epoch in range(cfg.epochs):
+        if epoch == cfg.epoch_swap_to_hard:
+            print(
+                "Reached epoch where swap to hard strategy occurs. Resetting val_loss to account for it."
+            )
+            best_val_loss = torch.inf
         encoder.train()
         epoch_loss = 0
-        for _, batch in enumerate(
+        for i, batch in enumerate(
             tqdm(train_dataloader, desc=f"epoch {epoch} train loop")
         ):
             optimizer.zero_grad()
 
-            pos1, pos2, neg = batch
+            pos, _, neg, _ = batch
 
-            pos1 = pos1.to(device)
-            pos2 = pos2.to(device)
+            pos = pos.to(device)
             neg = neg.to(device)
 
-            pos1_emb = encoder(pos1)
-            pos2_emb = encoder(pos2)
+            pos_emb = encoder(pos)
             neg_emb = encoder(neg)
 
-            loss = loss_fn(pos1_emb, pos2_emb, neg_emb)
+            # Start with semi-hard samples to learn "easy"
+            # ordering, and after some epochs swap to
+            # pure hard samples
+            if epoch < cfg.epoch_swap_to_hard:
+                triplet_setting = "semi-hard"
+            else:
+                triplet_setting = "hard"
+
+            triplets = build_triplets(
+                pos_emb,
+                neg_emb,
+                cfg.min_samples_per_id,
+                triplet_setting=triplet_setting,
+            )
+
+            loss = loss_fn(triplets[0], triplets[1], triplets[2])
             print(f"loss: {loss.detach().cpu().item()}")
+            if i % 100 == 0:
+                print(pos_emb[0])
             loss.backward()
 
             optimizer.step()
@@ -67,6 +101,9 @@ def main(cfg: DictConfig):
 
         print(f"Epoch {epoch} train loss: {epoch_loss}")
 
+        # For now save everything, I'm curious after each epoch
+        torch.save(encoder.state_dict(), f"model-{epoch}-{epoch_loss}.")
+
         # Run validation
         if epoch % cfg.validation_interval == 0:
             val_loss = 0
@@ -74,17 +111,27 @@ def main(cfg: DictConfig):
             for _, batch in enumerate(
                 tqdm(val_dataloader, desc=f"epoch {epoch} val loop")
             ):
-                pos1, pos2, neg = batch
+                pos, _, neg, _ = batch
 
-                pos1 = pos1.to(device)
-                pos2 = pos2.to(device)
+                pos = pos.to(device)
                 neg = neg.to(device)
 
-                pos1_emb = encoder(pos1)
-                pos2_emb = encoder(pos2)
+                pos_emb = encoder(pos)
                 neg_emb = encoder(neg)
 
-                loss = loss_fn(pos1_emb, pos2_emb, neg_emb)
+                if epoch < cfg.epoch_swap_to_hard:
+                    triplet_setting = "semi-hard"
+                else:
+                    triplet_setting = "hard"
+
+                triplets = build_triplets(
+                    pos_emb,
+                    neg_emb,
+                    cfg.min_samples_per_id,
+                    triplet_setting=triplet_setting,
+                )
+
+                loss = loss_fn(triplets[0], triplets[1], triplets[2])
 
                 val_loss += loss.detach().cpu().item()
 
@@ -107,9 +154,6 @@ def main(cfg: DictConfig):
                         f"No improvement for {cfg.validations_without_improvement} epochs. Terminating."
                     )
                     return
-
-        if epoch % 10 == 0:
-            torch.save(encoder.state_dict(), f"model-{epoch}-{epoch_loss}.")
 
 
 if __name__ == "__main__":
