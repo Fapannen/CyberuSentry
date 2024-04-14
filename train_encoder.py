@@ -5,7 +5,7 @@ from omegaconf import DictConfig
 
 from sampler.sampler import IdentitySampler
 
-from utils.triplet import build_triplets
+from utils.triplet import build_triplets, build_triplets_v2
 
 
 @hydra.main(config_path="config", config_name="config-default", version_base=None)
@@ -36,7 +36,7 @@ def main(cfg: DictConfig):
     train_dataloader = torch.utils.data.DataLoader(
         train_dataset,
         batch_sampler=IdentitySampler(
-            len(list(train_dataset.get_identities().keys())),
+            len(train_dataset.get_identities()),
             cfg.batch_size,
             cfg.min_samples_per_id,
         ),
@@ -44,7 +44,7 @@ def main(cfg: DictConfig):
     val_dataloader = torch.utils.data.DataLoader(
         val_dataset,
         batch_sampler=IdentitySampler(
-            len(list(val_dataset.get_identities().keys())),
+            len(val_dataset.get_identities()),
             cfg.batch_size,
             cfg.min_samples_per_id,
         ),
@@ -82,11 +82,12 @@ def main(cfg: DictConfig):
             else:
                 triplet_setting = "hard"
 
-            triplets = build_triplets(
+            triplets = build_triplets_v2(
                 pos_emb,
                 neg_emb,
                 cfg.min_samples_per_id,
                 triplet_setting=triplet_setting,
+                margin=cfg.loss.definition.margin
             )
 
             loss = loss_fn(triplets[0], triplets[1], triplets[2])
@@ -119,16 +120,14 @@ def main(cfg: DictConfig):
                 pos_emb = encoder(pos)
                 neg_emb = encoder(neg)
 
-                if epoch < cfg.epoch_swap_to_hard:
-                    triplet_setting = "semi-hard"
-                else:
-                    triplet_setting = "hard"
-
-                triplets = build_triplets(
+                # As recommended, evaluate on hard only
+                # to see the improvements
+                triplets = build_triplets_v2(
                     pos_emb,
                     neg_emb,
                     cfg.min_samples_per_id,
-                    triplet_setting=triplet_setting,
+                    triplet_setting="hard",
+                    margin=cfg.loss.definition.margin
                 )
 
                 loss = loss_fn(triplets[0], triplets[1], triplets[2])

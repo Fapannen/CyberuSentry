@@ -5,6 +5,73 @@ from typing import Literal
 def dist(a, b):
     return torch.sum(torch.square(torch.abs(a - b))).item()
 
+def build_triplets_v2(pos_embs: torch.Tensor,
+    neg_embs: torch.Tensor,
+    min_samples_per_id: int,
+    triplet_setting=Literal["semi-hard", "hard", "ultra-hard"],
+    margin : int = 0.2
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    triplets = []
+
+    # Length of one cycle, basically the number of samples
+    # before the same identity is reached again
+    cycle_length = len(pos_embs) // min_samples_per_id
+
+    for i in range(len(pos_embs)):
+        other_positives_indices = list(range(i % cycle_length, len(pos_embs), cycle_length))
+        other_positives_indices.remove(i) # Dont compare with itself
+
+        # As said in the paper:
+        # Instead of picking the hardest positive, we use 
+        # all anchor-positive pairs in a mini-batch while
+        # still selecting the hard negatives
+        for j in other_positives_indices:
+            pos_emb1 = pos_embs[i]
+            pos_emb2 = pos_embs[j]
+
+            if triplet_setting == "semi-hard":
+                indices_satisfies_semihard = []
+                
+                for k in other_positives_indices:
+                    if abs(dist(pos_emb1, neg_embs[k]) - dist(
+                        pos_emb1, pos_emb2
+                    )) < margin and (dist(pos_emb1, pos_emb2) < dist(pos_emb1, neg_embs[k])):
+                        indices_satisfies_semihard.append(k)
+                        triplet = torch.stack((pos_emb1, pos_emb2, neg_embs[k]))
+                        triplets.append(triplet)
+
+            if triplet_setting == "hard" or len(indices_satisfies_semihard) == 0:
+                # Pick the hardest (here argmin because the smaller the distance from negative, the harder it is)
+
+                # We need to pick the negatives from the indices on which samples of the same identity lie.
+                # If we have a sample of identity X on indices 'YZ', we know that all negatives on indices
+                # YZ are also negative to all other samples of identity X. We cannot however pick from
+                # any negative index, because there, for identity Y, an identity X might have been chosen
+                # as negative, which would confuse the network.
+                negatives_indices = other_positives_indices
+
+                # Get the negative samples with regards to identity i
+                negatives_to_identity = torch.index_select(
+                    neg_embs, dim=0, index=torch.tensor(negatives_indices).cuda()
+                )
+
+                # Determine which of the negatives is the hardest. The index is however
+                # to "negatives_indices", not to neg_embs yet!
+                hardest_negative_idx = torch.argmin(
+                    torch.sum(torch.abs(negatives_to_identity - pos_embs[i]), dim=1)
+                ).item()
+
+                triplet = torch.stack(
+                    (
+                        pos_emb1,
+                        pos_emb2,
+                        neg_embs[negatives_indices[hardest_negative_idx]],
+                    )
+                )
+                triplets.append(triplet)
+
+    return torch.stack(triplets, dim=1)
+
 
 def build_triplets(
     pos_embs: torch.Tensor,
@@ -59,7 +126,9 @@ def build_triplets(
     for i in range(len(pos_embs)):
         # Get indices of embeddings of the same identity in the batch
         # as "looking forward", ie. the positives already processed
-        # will not be there to avoid redundancy
+        # will not be there to avoid redundancy (Note that this is not
+        # a 100% correct approach, but it should make the task a little
+        # easier at the beginning) Perhaps TODO.
         other_positives_indices = list(range(i, len(pos_embs), cycle_length))[1:]
         if len(other_positives_indices) == 0:
             continue
