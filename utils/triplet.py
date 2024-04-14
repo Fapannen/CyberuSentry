@@ -97,7 +97,9 @@ def build_triplets(
             # YZ are also negative to all other samples of identity X. We cannot however pick from
             # any negative index, because there, for identity Y, an identity X might have been chosen
             # as negative, which would confuse the network.
-            negatives_indices = list(range(i % cycle_length, len(pos_embs), cycle_length))
+            negatives_indices = list(
+                range(i % cycle_length, len(pos_embs), cycle_length)
+            )
 
             # Get the negative samples with regards to identity i
             negatives_to_identity = torch.index_select(
@@ -111,7 +113,11 @@ def build_triplets(
             ).item()
 
             triplet = torch.stack(
-                (pos_embs[i], hardest_embedding, neg_embs[negatives_indices[hardest_negative_idx]])
+                (
+                    pos_embs[i],
+                    hardest_embedding,
+                    neg_embs[negatives_indices[hardest_negative_idx]],
+                )
             )
             triplets.append(triplet)
 

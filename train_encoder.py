@@ -40,7 +40,7 @@ def main(cfg: DictConfig):
             cfg.batch_size,
             cfg.min_samples_per_id,
         ),
-    ) # TODO: Move sampler config to hydra
+    )  # TODO: Move sampler config to hydra
     val_dataloader = torch.utils.data.DataLoader(
         val_dataset,
         batch_sampler=IdentitySampler(
