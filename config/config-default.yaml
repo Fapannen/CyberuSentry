@@ -15,4 +15,4 @@ epoch_swap_to_hard: 5
 best_model_path: "best.ckpt"
 min_samples_per_id: 8
 
-restore_model: "model-7-223.9966380886035"
+restore_model: "model-15-157.09541449008975"

@@ -9,15 +9,14 @@ from torch.utils.data import Dataset
 from utils.image import read_image
 
 
-class CelebADataset(Dataset):
-    """CelebA dataset
-    https://mmlab.ie.cuhk.edu.hk/projects/CelebA.html
+class CasiaWebface(Dataset):
+    """Casia Webface dataset
+    https://www.kaggle.com/datasets/ntl0601/casia-webface
     """
 
     def __init__(
         self,
         path_to_dataset_dir: str,
-        path_to_identity_annotations: str,
         augs: torchvision.transforms.v2.Compose | None,
         transforms: torchvision.transforms.v2.Compose,
         split: Literal["train", "val"],
@@ -27,9 +26,8 @@ class CelebADataset(Dataset):
         Parameters
         ----------
         path_to_dataset_dir : str
-            Path to the directory containing the images
-        path_to_identity_annotations : str
-            Path to the identity annotations file
+            Path to the directory containing the directories separating
+            the individual identities
         augs : torchvision.transforms.v2.Compose | None
             Optional augmentations. Can be None in validation
         transforms : torchvision.transforms.v2.Compose
@@ -45,22 +43,18 @@ class CelebADataset(Dataset):
             else path_to_dataset_dir + "/"
         )
 
-        # Dataset consists of 202 599 images across 10 177 identities.
-        # Images do not have any naming and go from 00000.jpg to max.jpg
-        # The identity annotations are provided in a separate file of form
-        # <image_name> <identity_id>
-        # Build a dictionary {id: [name_img_path1, name_img_path2, ...]}
+        # Dataset contains 494,414 face images of 10,575 real identities collected from the web
+        # Images for separate identities are stored in an individual subdirectory
 
         self.identities = {}
-        with open(path_to_identity_annotations, "r") as annotations_file:
-            for line in annotations_file.readlines():
-                image_path, identity = line.replace("\n", "").split(" ")
-                identity = int(identity)
-
-                if identity not in self.identities:
-                    self.identities[identity] = [self.dataset_dir + image_path]
-                else:
-                    self.identities[identity].append(self.dataset_dir + image_path)
+        for identity_subdir in os.listdir(self.dataset_dir):
+            # subdirs are named ie "0000001", "0000002", ...
+            identity_identifier = int(identity_subdir)
+            self.identities[identity_identifier] = []
+            for image_path in os.listdir(str(Path(self.dataset_dir) / identity_subdir)):
+                self.identities[identity_identifier].append(
+                    str(Path(self.dataset_dir) / identity_subdir / image_path)
+                )
 
         # Build a train / val split
         self.split = split

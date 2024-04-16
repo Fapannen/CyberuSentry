@@ -4,6 +4,8 @@ from tqdm import tqdm
 from omegaconf import DictConfig
 import argparse
 
+from torch.utils.data import ConcatDataset
+
 from sampler.sampler import IdentitySampler
 from utils.model import restore_model
 
@@ -33,16 +35,27 @@ def main(cfg: DictConfig):
     transforms = hydra.utils.instantiate(cfg.transforms.definition)
 
     # Dataset-specific definitions
-    train_dataset = hydra.utils.instantiate(
-        cfg.datasets.definition[0], augs=augs, transforms=transforms, split="train"
-    )  # TODO: remove 0
-    val_dataset = hydra.utils.instantiate(
-        cfg.datasets.definition[0], augs=augs, transforms=transforms, split="val"
-    )  # TODO: remove 0
+    train_datasets = [
+        hydra.utils.instantiate(
+            dataset, augs=augs, transforms=transforms, split="train"
+        )
+        for dataset in cfg.datasets.definition
+    ]
+    val_datasets = [
+        hydra.utils.instantiate(dataset, augs=augs, transforms=transforms, split="val")
+        for dataset in cfg.datasets.definition
+    ]
+
+    train_datasets_len = sum([len(d.get_identities()) for d in train_datasets])
+    val_datasets_len = sum([len(d.get_identities()) for d in val_datasets])
+
+    train_dataset = ConcatDataset(train_datasets)
+    val_dataset = ConcatDataset(val_datasets)
+
     train_dataloader = torch.utils.data.DataLoader(
         train_dataset,
         batch_sampler=IdentitySampler(
-            len(train_dataset.get_identities()),
+            train_datasets_len,
             cfg.batch_size,
             cfg.min_samples_per_id,
         ),
@@ -50,7 +63,7 @@ def main(cfg: DictConfig):
     val_dataloader = torch.utils.data.DataLoader(
         val_dataset,
         batch_sampler=IdentitySampler(
-            len(val_dataset.get_identities()),
+            val_datasets_len,
             cfg.batch_size,
             cfg.min_samples_per_id,
         ),
