@@ -138,7 +138,7 @@ def build_triplets(
                     triplets.append(triplet)
 
             if triplet_setting == "hard" or len(indices_satisfies_semihard) == 0:
-                # Pick the hardest negative
+                # Pick the hardest negative (here argmin because the smaller the distance from negative, the harder it is)
 
                 # We need to pick the negatives from the indices on which samples of the same identity lie.
                 # If we have a sample of identity X on indices 'YZ', we know that all negatives on indices

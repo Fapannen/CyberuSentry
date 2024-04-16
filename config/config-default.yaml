@@ -11,6 +11,8 @@ batch_size: 32
 epochs: 100
 validation_interval: 2
 validations_without_improvement: 3
-epoch_swap_to_hard: 3
+epoch_swap_to_hard: 5
 best_model_path: "best.ckpt"
 min_samples_per_id: 8
+
+restore_model: "model-7-223.9966380886035"

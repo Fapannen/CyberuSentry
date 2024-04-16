@@ -2,10 +2,12 @@ import torch
 import hydra
 from tqdm import tqdm
 from omegaconf import DictConfig
+import argparse
 
 from sampler.sampler import IdentitySampler
+from utils.model import restore_model
 
-from utils.triplet import build_triplets, build_triplets_v2
+from utils.triplet import build_triplets
 
 
 @hydra.main(config_path="config", config_name="config-default", version_base=None)
@@ -16,7 +18,11 @@ def main(cfg: DictConfig):
     print(f"Running on {device} ...")
 
     # Encoder-specific definitions
-    encoder = hydra.utils.instantiate(cfg.encoder.definition).to(device)
+    encoder = (
+        hydra.utils.instantiate(cfg.encoder.definition).to(device)
+        if cfg.restore_model is None
+        else restore_model(cfg.restore_model, "cuda:0").to(device)
+    )
     loss_fn = hydra.utils.instantiate(cfg.loss.definition)
     optimizer = hydra.utils.instantiate(
         cfg.optimizer.definition, params=encoder.parameters()
@@ -53,7 +59,9 @@ def main(cfg: DictConfig):
     validations_without_improvement = 0
     best_val_loss = torch.inf
 
-    for epoch in range(cfg.epochs):
+    start = 0 if cfg.restore_model is None else int(cfg.restore_model.split("-")[1]) + 1
+
+    for epoch in range(start, cfg.epochs):
         if epoch == cfg.epoch_swap_to_hard:
             print(
                 "Reached epoch where swap to hard strategy occurs. Resetting val_loss to account for it."
@@ -82,12 +90,12 @@ def main(cfg: DictConfig):
             else:
                 triplet_setting = "hard"
 
-            triplets = build_triplets_v2(
+            triplets = build_triplets(
                 pos_emb,
                 neg_emb,
                 cfg.min_samples_per_id,
                 triplet_setting=triplet_setting,
-                margin=cfg.loss.definition.margin
+                margin=cfg.loss.definition.margin,
             )
 
             loss = loss_fn(triplets[0], triplets[1], triplets[2])
@@ -122,12 +130,12 @@ def main(cfg: DictConfig):
 
                 # As recommended, evaluate on hard only
                 # to see the improvements
-                triplets = build_triplets_v2(
+                triplets = build_triplets(
                     pos_emb,
                     neg_emb,
                     cfg.min_samples_per_id,
                     triplet_setting="hard",
-                    margin=cfg.loss.definition.margin
+                    margin=cfg.loss.definition.margin,
                 )
 
                 loss = loss_fn(triplets[0], triplets[1], triplets[2])
