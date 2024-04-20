@@ -115,6 +115,9 @@ def run_inference_images(model_path: str, img1: str, img2: str):
         for i in range(len(faces_cropped))
     ]
 
+    # Store the diffs to sort them and display by similarity
+    diffs = []
+
     for face_i in range(len(faces_mapped)):
         rest = [faces_mapped[j] for j in range(face_i + 1, len(faces_mapped))]
         face1_idx, face1_cropped, face1_embed = faces_mapped[face_i]
@@ -129,12 +132,13 @@ def run_inference_images(model_path: str, img1: str, img2: str):
         for face2 in rest:
             face2_idx, _, face2_embed = face2
             face_diff = torch.sum(torch.abs(face1_embed - face2_embed))
-            cos_sim = torch.nn.CosineSimilarity()
-            face_cossim = (cos_sim(face1_embed, face2_embed)).item()
-            print(
-                f"The difference of face {face1_idx} versus face {face2_idx} is {face_diff}"
-                f" and their cosine similarity is {face_cossim}"
-            )
+            diffs.append((face1_idx, face2_idx, face_diff))
+    
+    diffs_sorted = list(sorted(diffs, key=lambda x : x[2]))
+
+    for f1, f2, diff in diffs_sorted:
+        print(f"Difference of Face {f1} and {f2} = {diff}")
+        
 
 
 if __name__ == "__main__":
