@@ -4,12 +4,86 @@ import argparse
 import cv2
 import numpy as np
 
+from pathlib import Path
+
 from utils.image import read_image, numpy_to_model_format, model_format_to_numpy
 from utils.model import restore_model
 
+from utils.triplet import dist
 
-def run_inference_video():
-    pass
+
+def run_inference_video(model_path, video_path, each_nth_frame = 30, unique_dist_threshold = 0.5):
+    video = cv2.VideoCapture(video_path)
+    video_at = 0
+
+    # Init the face detector
+    fp_model = fp.MTCNN()
+
+    # Init the face encoder
+    model = restore_model(model_path, device="cpu").eval()
+
+    # List of unique faces
+    # {int: [face1, face2]}
+    uniques = {}
+
+    # Create an output directory where identities will be shown
+    video_output_dir_path = Path(f"video_inference_output/{Path(video_path).stem}").absolute()
+    video_output_dir_path.mkdir(exist_ok=True, parents=True)
+
+    while video.isOpened():
+        ret, frame = video.read()
+
+        if ret:
+            # inference image
+            image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            cv2.imwrite("frame.jpg", frame)
+
+            image_faces = fp_model.detect(image)
+            
+            if image_faces[0] is not None:
+                faces_cropped = get_cropped_faces(image_faces, image)
+                faces_cropped = list(map(lambda x: numpy_to_model_format(x, add_batch_dim=True), faces_cropped))
+                faces_embeds = [
+                    (faces_cropped[i], model(faces_cropped[i]))
+                    for i in range(len(faces_cropped))
+                ]
+
+                for face_orig, face_embed in faces_embeds:
+                    # Flag whether we found a match in already existing
+                    found_matching = False
+
+                    for unique in uniques:
+                        if dist(face_embed, uniques[unique][0]) <= unique_dist_threshold:
+
+                            cv2.imwrite(
+                                str(video_output_dir_path / str(unique) / (str(len(uniques[unique]) + 1) + ".jpg")),
+                                cv2.cvtColor(model_format_to_numpy(face_orig), cv2.COLOR_RGB2BGR)
+                            )
+
+                            uniques[unique].append([face_embed])
+                            found_matching = True
+                            print("Found matching")
+                            break
+                    
+                    if not found_matching:
+                        id = len(uniques)
+                        print(f"Establishing a new id {id}")
+                        uniques[id] = [face_embed]
+
+                        new_id_dir = video_output_dir_path / str(id)
+                        new_id_dir.mkdir(exist_ok=True, parents=True)
+                        
+                        cv2.imwrite(
+                                str(new_id_dir / "1.jpg"),
+                                cv2.cvtColor(model_format_to_numpy(face_orig), cv2.COLOR_RGB2BGR)
+                            )
+
+            video_at += each_nth_frame
+            video.set(cv2.CAP_PROP_POS_FRAMES, video_at)
+        else:
+            video.release()
+            break
 
 
 def get_cropped_faces(
@@ -154,13 +228,15 @@ if __name__ == "__main__":
         action="store",
         dest="video_path",
     )
+    parser.add_argument("-t", "--threshold", action="store", dest="threshold", default=1.0, type=float)
+    parser.add_argument("-f", "--frames-to-skip", action="store", dest="frames_to_skip", default=30, type=int)
     args = parser.parse_args()
 
     if args.video_path is None and args.img1 is None:
         raise ValueError("Missing arguments ...")
 
     elif args.video_path is not None:
-        run_inference_video()
+        run_inference_video(args.model_path, args.video_path, each_nth_frame=args.frames_to_skip, unique_dist_threshold=args.threshold)
 
     elif args.img1 is not None and args.img2 is not None:
         run_inference_images(args.model_path, args.img1, args.img2)
