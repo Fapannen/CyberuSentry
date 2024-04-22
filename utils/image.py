@@ -1,6 +1,7 @@
 import cv2
 import torch
 import numpy as np
+from pathlib import Path
 
 
 def read_image(
@@ -104,3 +105,23 @@ def model_format_to_numpy(image: torch.Tensor) -> np.ndarray:
     image = image.permute(1, 2, 0).numpy() * 255
     image = image.astype(np.uint8)
     return image
+
+
+def debug_samples_batch(batch: torch.Tensor, output_dir: str = "./debug") -> None:
+    out_path = Path(output_dir).resolve()
+    out_path.mkdir(exist_ok=True, parents=True)
+
+    positives, negatives = batch
+
+    for i in range(len(positives)):
+        pos_img = positives[i]
+        neg_img = negatives[i]
+
+        cv2.imwrite(
+            f"{str(output_dir)}/{str(i)}-pos.jpg",
+            cv2.cvtColor(model_format_to_numpy(pos_img), cv2.COLOR_RGB2BGR),
+        )
+        cv2.imwrite(
+            f"{str(output_dir)}/{str(i)}-neg.jpg",
+            cv2.cvtColor(model_format_to_numpy(neg_img), cv2.COLOR_RGB2BGR),
+        )

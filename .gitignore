@@ -2,8 +2,10 @@
 __pycache__/
 *.py[cod]
 
-# Data folder
+# Folders
 data/
+debug/
+outputs/
 
 # VScode
 .vscode

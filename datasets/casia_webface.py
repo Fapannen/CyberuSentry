@@ -11,7 +11,7 @@ class CasiaWebface(FaceDataset):
     """
 
     def build_identities(self) -> dict[int, list[str]]:
-        identities = {}
+        identities: dict[int, list[str]] = {}
 
         for identity_subdir in os.listdir(self.dataset_dir):
             # subdirs are named ie "0000001", "0000002", ...

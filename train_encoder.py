@@ -2,13 +2,12 @@ import torch
 import hydra
 from tqdm import tqdm
 from omegaconf import DictConfig
-import argparse
 
 from torch.utils.data import ConcatDataset
 
 from sampler.sampler import IdentitySampler
 from utils.model import restore_model
-
+from utils.image import debug_samples_batch
 from utils.triplet import build_triplets
 
 
@@ -85,6 +84,11 @@ def main(cfg: DictConfig):
         for i, batch in enumerate(
             tqdm(train_dataloader, desc=f"epoch {epoch} train loop")
         ):
+
+            # Plot images to see what is being fed into the network
+            if i == 0:
+                debug_samples_batch(batch)
+
             optimizer.zero_grad()
 
             pos, neg = batch
@@ -130,9 +134,10 @@ def main(cfg: DictConfig):
         if epoch % cfg.validation_interval == 0:
             val_loss = 0
             encoder.eval()
-            for _, batch in enumerate(
+            for i, batch in enumerate(
                 tqdm(val_dataloader, desc=f"epoch {epoch} val loop")
             ):
+
                 pos, neg = batch
 
                 pos = pos.to(device)
