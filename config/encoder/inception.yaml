@@ -1,5 +1,5 @@
 definition:
-  _target_: encoder.inception.SentryEncoder
+  _target_: encoder.inception.InceptionV3
   embedding_dim: 128
 
-input_size: [256, 256]
+input_size: [299, 299]

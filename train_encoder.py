@@ -99,6 +99,11 @@ def main(cfg: DictConfig):
             pos_emb = encoder(pos)
             neg_emb = encoder(neg)
 
+            # InceptionOutputs class etc ...
+            if not isinstance(pos_emb, torch.Tensor):
+                pos_emb = pos_emb[0]
+                neg_emb = neg_emb[0]
+
             # Start with semi-hard samples to learn "easy"
             # ordering, and after some epochs swap to
             # pure hard samples
