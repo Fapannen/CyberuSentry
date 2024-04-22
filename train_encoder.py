@@ -87,7 +87,7 @@ def main(cfg: DictConfig):
         ):
             optimizer.zero_grad()
 
-            pos, _, neg, _ = batch
+            pos, neg = batch
 
             pos = pos.to(device)
             neg = neg.to(device)
@@ -133,7 +133,7 @@ def main(cfg: DictConfig):
             for _, batch in enumerate(
                 tqdm(val_dataloader, desc=f"epoch {epoch} val loop")
             ):
-                pos, _, neg, _ = batch
+                pos, neg = batch
 
                 pos = pos.to(device)
                 neg = neg.to(device)
