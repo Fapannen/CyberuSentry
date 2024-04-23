@@ -1,9 +1,6 @@
-import torch
 import torchvision
-import os
 import random
 
-from pathlib import Path
 from typing import Literal
 from torch.utils.data import Dataset
 from utils.image import read_image
@@ -15,8 +12,9 @@ class FaceDataset(Dataset):
     a dataloader.
 
     Datasets derived from this class should only override a method
-    desired to establish {id:[img1, img2]} mapping from id to a set
-    of images of that 'id' identity.
+    desired to establish {id:[img1, img2, ...]} mapping from id to a set
+    of images of that 'id' identity. 'id' must be an integer, the value
+    must be a list of paths to images.
     """
 
     def __init__(
