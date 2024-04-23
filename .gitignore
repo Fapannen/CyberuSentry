@@ -9,3 +9,6 @@ outputs/
 
 # VScode
 .vscode
+
+# Misc
+*.jpg
