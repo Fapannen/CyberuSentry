@@ -217,8 +217,10 @@ def run_inference_images(model_path: str, img1: str, img2: str):
         face_image_numpy = model_format_to_numpy(face1_cropped)
 
         # Write the image to be able to identify the faces individually
+        Path("inference_output").mkdir(exist_ok=True, parents=True)
         cv2.imwrite(
-            f"Face_{face1_idx}.jpg", cv2.cvtColor(face_image_numpy, cv2.COLOR_RGB2BGR)
+            f"inference_output/Face_{face1_idx}.jpg",
+            cv2.cvtColor(face_image_numpy, cv2.COLOR_RGB2BGR),
         )
 
         for face2 in rest:
