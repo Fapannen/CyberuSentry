@@ -12,7 +12,9 @@ from utils.model import restore_model
 from utils.triplet import dist
 
 
-def run_inference_video(model_path, video_path, each_nth_frame = 30, unique_dist_threshold = 0.5):
+def run_inference_video(
+    model_path, video_path, each_nth_frame=30, unique_dist_threshold=0.5
+):
     video = cv2.VideoCapture(video_path)
     video_at = 0
 
@@ -27,7 +29,8 @@ def run_inference_video(model_path, video_path, each_nth_frame = 30, unique_dist
     uniques = {}
 
     # Create an output directory where identities will be shown
-    video_output_dir_path = Path(f"video_inference_output/{Path(video_path).stem}").absolute()
+    video_output_dir_path = Path(f"video_inference_output/{Path(video_path).stem}")
+    # .absolute() Issues on windows :)))
     video_output_dir_path.mkdir(exist_ok=True, parents=True)
 
     while video.isOpened():
@@ -40,10 +43,15 @@ def run_inference_video(model_path, video_path, each_nth_frame = 30, unique_dist
             cv2.imwrite("frame.jpg", frame)
 
             image_faces = fp_model.detect(image)
-            
+
             if image_faces[0] is not None:
                 faces_cropped = get_cropped_faces(image_faces, image)
-                faces_cropped = list(map(lambda x: numpy_to_model_format(x, add_batch_dim=True), faces_cropped))
+                faces_cropped = list(
+                    map(
+                        lambda x: numpy_to_model_format(x, add_batch_dim=True),
+                        faces_cropped,
+                    )
+                )
                 faces_embeds = [
                     (faces_cropped[i], model(faces_cropped[i]))
                     for i in range(len(faces_cropped))
@@ -54,18 +62,27 @@ def run_inference_video(model_path, video_path, each_nth_frame = 30, unique_dist
                     found_matching = False
 
                     for unique in uniques:
-                        if dist(face_embed, uniques[unique][0]) <= unique_dist_threshold:
+                        if (
+                            dist(face_embed, uniques[unique][0])
+                            <= unique_dist_threshold
+                        ):
 
                             cv2.imwrite(
-                                str(video_output_dir_path / str(unique) / (str(len(uniques[unique]) + 1) + ".jpg")),
-                                cv2.cvtColor(model_format_to_numpy(face_orig), cv2.COLOR_RGB2BGR)
+                                str(
+                                    video_output_dir_path
+                                    / str(unique)
+                                    / (str(len(uniques[unique]) + 1) + ".jpg")
+                                ),
+                                cv2.cvtColor(
+                                    model_format_to_numpy(face_orig), cv2.COLOR_RGB2BGR
+                                ),
                             )
 
                             uniques[unique].append([face_embed])
                             found_matching = True
                             print("Found matching")
                             break
-                    
+
                     if not found_matching:
                         id = len(uniques)
                         print(f"Establishing a new id {id}")
@@ -73,11 +90,12 @@ def run_inference_video(model_path, video_path, each_nth_frame = 30, unique_dist
 
                         new_id_dir = video_output_dir_path / str(id)
                         new_id_dir.mkdir(exist_ok=True, parents=True)
-                        
                         cv2.imwrite(
-                                str(new_id_dir / "1.jpg"),
-                                cv2.cvtColor(model_format_to_numpy(face_orig), cv2.COLOR_RGB2BGR)
-                            )
+                            str(new_id_dir / "1.jpg"),
+                            cv2.cvtColor(
+                                model_format_to_numpy(face_orig), cv2.COLOR_RGB2BGR
+                            ),
+                        )
 
             video_at += each_nth_frame
             video.set(cv2.CAP_PROP_POS_FRAMES, video_at)
@@ -207,12 +225,11 @@ def run_inference_images(model_path: str, img1: str, img2: str):
             face2_idx, _, face2_embed = face2
             face_diff = torch.sum(torch.abs(face1_embed - face2_embed))
             diffs.append((face1_idx, face2_idx, face_diff))
-    
-    diffs_sorted = list(sorted(diffs, key=lambda x : x[2]))
+
+    diffs_sorted = list(sorted(diffs, key=lambda x: x[2]))
 
     for f1, f2, diff in diffs_sorted:
         print(f"Difference of Face {f1} and {f2} = {diff}")
-        
 
 
 if __name__ == "__main__":
@@ -228,15 +245,29 @@ if __name__ == "__main__":
         action="store",
         dest="video_path",
     )
-    parser.add_argument("-t", "--threshold", action="store", dest="threshold", default=1.0, type=float)
-    parser.add_argument("-f", "--frames-to-skip", action="store", dest="frames_to_skip", default=30, type=int)
+    parser.add_argument(
+        "-t", "--threshold", action="store", dest="threshold", default=1.0, type=float
+    )
+    parser.add_argument(
+        "-f",
+        "--frames-to-skip",
+        action="store",
+        dest="frames_to_skip",
+        default=30,
+        type=int,
+    )
     args = parser.parse_args()
 
     if args.video_path is None and args.img1 is None:
         raise ValueError("Missing arguments ...")
 
     elif args.video_path is not None:
-        run_inference_video(args.model_path, args.video_path, each_nth_frame=args.frames_to_skip, unique_dist_threshold=args.threshold)
+        run_inference_video(
+            args.model_path,
+            args.video_path,
+            each_nth_frame=args.frames_to_skip,
+            unique_dist_threshold=args.threshold,
+        )
 
     elif args.img1 is not None and args.img2 is not None:
         run_inference_images(args.model_path, args.img1, args.img2)

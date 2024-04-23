@@ -69,7 +69,7 @@ def numpy_to_model_format(
             processed image in Tensor format, ready to
             be consumed by the model.
     """
-    input_size = (256, 256)
+    input_size = (224, 224)
 
     image = cv2.resize(image, input_size)
 

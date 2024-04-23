@@ -6,9 +6,7 @@ class EvaTiny(nn.Module):
     def __init__(self, num_classes=128) -> None:
         super().__init__()
         self.model = timm.create_model(
-            "eva02_tiny_patch14_224.mim_in22k",
-            pretrained=False,
-            num_classes=num_classes,
+            "eva02_tiny_patch14_224.mim_in22k", pretrained=False
         )
 
     def forward(self, x):

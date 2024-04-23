@@ -1,5 +1,5 @@
 definition:
   _target_: encoder.eva_tiny.EvaTiny # TODO put it somewhere higher level so that its not model-specific
-  num_classes: 128
+  num_classes: 192
 
 input_size: [224, 224]

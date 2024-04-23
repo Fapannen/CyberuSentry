@@ -8,7 +8,6 @@ class EvaSmall(nn.Module):
         self.model = timm.create_model(
             "eva02_base_patch14_224.mim_in22k",
             pretrained=False,
-            num_classes=num_classes,
         )
 
     def forward(self, x):
