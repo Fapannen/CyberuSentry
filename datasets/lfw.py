@@ -23,6 +23,6 @@ class LFWDataset(FaceDataset):
         new_identities = {}
 
         for i in range(len(list(identities.keys()))):
-            new_identities[i] = identities[list(identities.keys)[i]]
+            new_identities[i] = identities[list(identities.keys())[i]]
 
         return new_identities

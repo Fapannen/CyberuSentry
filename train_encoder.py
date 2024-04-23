@@ -74,11 +74,25 @@ def main(cfg: DictConfig):
     start = 0 if cfg.restore_model is None else int(cfg.restore_model.split("-")[1]) + 1
 
     for epoch in range(start, cfg.epochs):
-        if epoch == cfg.epoch_swap_to_hard:
+
+        # Determine the strategy of generating triplets
+        if epoch < cfg.epoch_swap_to_hard:
+            # Start with semi-hard strategy, prepare the embedding space for
+            # more difficult learning
+            triplet_setting = "semi-hard"
+        elif epoch >= cfg.epoch_swap_to_hard and epoch < cfg.epoch_swap_to_batch_hard:
+            # For each positive pair, find the hardest negative
+            triplet_setting = "hard"
+        else:
+            # For each positive, find the hardest positive and negative
+            triplet_setting = "batch-hard"
+
+        if epoch == cfg.epoch_swap_to_hard or epoch == cfg.epoch_swap_to_batch_hard:
             print(
-                "Reached epoch where swap to hard strategy occurs. Resetting val_loss to account for it."
+                "Reached epoch where strategy swap occurs. Resetting val_loss to account for it."
             )
             best_val_loss = torch.inf
+
         encoder.train()
         epoch_loss = 0
         for i, batch in enumerate(
@@ -103,14 +117,6 @@ def main(cfg: DictConfig):
             if not isinstance(pos_emb, torch.Tensor):
                 pos_emb = pos_emb[0]
                 neg_emb = neg_emb[0]
-
-            # Start with semi-hard samples to learn "easy"
-            # ordering, and after some epochs swap to
-            # pure hard samples
-            if epoch < cfg.epoch_swap_to_hard:
-                triplet_setting = "semi-hard"
-            else:
-                triplet_setting = "hard"
 
             triplets = build_triplets(
                 pos_emb,
