@@ -12,8 +12,9 @@ epochs: 100
 validation_interval: 2
 validations_without_improvement: 3
 epoch_swap_to_hard: 5
-epoch_swap_to_batch_hard: 20
+epoch_swap_to_batch_hard: 30
 best_model_path: "best.ckpt"
-min_samples_per_id: 4
+min_samples_per_id: 8
 
+# If null, training is done from scratch
 restore_model: null
