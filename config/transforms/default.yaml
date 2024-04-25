@@ -2,5 +2,12 @@ definition:
   _target_: torchvision.transforms.v2.Compose
   transforms:
     - _target_: torchvision.transforms.v2.Resize
+      # It would be great if hydra was able to do sth
+      # like [${encoder.image_size}, ${encoder.image_size}]
+
+      # https://stackoverflow.com/questions/64802586/how-to-gather-config-files-in-a-list-with-hydra-fb
+
+      # since passing a single int to "size" parameter
+      # preserves aspect ratio, which is undesired.
       size: [224, 224] 
     
