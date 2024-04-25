@@ -1,5 +1,8 @@
 import torchvision
 import random
+import torch
+
+from abc import abstractmethod
 
 from typing import Literal
 from torch.utils.data import Dataset
@@ -75,6 +78,7 @@ class FaceDataset(Dataset):
         self.augs = augs
         self.transforms = transforms
 
+    @abstractmethod
     def build_identities(self) -> dict[int, list[str]]:
         raise NotImplementedError("This method has to be implemented!")
 
@@ -90,7 +94,7 @@ class FaceDataset(Dataset):
 
         Parameters
         ----------
-        origin_identity : str
+        origin_identity : int
             Identifier of the identity to generate tuple from
 
         Returns
@@ -113,7 +117,7 @@ class FaceDataset(Dataset):
 
         Parameters
         ----------
-        origin_identity : str
+        origin_identity : int
             Identity to exclude
 
         Returns
@@ -127,7 +131,7 @@ class FaceDataset(Dataset):
 
         return random.choice(self.identities[different_identity]), different_identity
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx) -> tuple[torch.Tensor, torch.Tensor]:
         """Returns a training tuple for triplet loss
 
         positive images are images of the same identity, whereas
@@ -135,14 +139,15 @@ class FaceDataset(Dataset):
 
         Parameters
         ----------
-        idx : _type_
+        idx : int
             Index of the item
 
         Returns
         -------
-        _type_
-            A tuple (pos_img, pos_img2, neg_image) which is designed
-            to be used for triplet loss
+        Tuple of Tensors
+            A tuple (pos_img, neg_image) which is designed
+            to be used for triplet loss. The triples are
+            built online during training.
         """
         origin_identity = self.mto_identities[idx]
 
