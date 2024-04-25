@@ -7,7 +7,7 @@ definition:
       transforms:
         - _target_: torchvision.transforms.v2.GaussianBlur
           kernel_size: 7
-      p: 0.5
+      p: 0.25
     
     # Random Rotation - faces can be somehow rotated sometimes
     - _target_: torchvision.transforms.v2.RandomApply
