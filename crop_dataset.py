@@ -80,10 +80,9 @@ def crop_images_in_folder(src_path: str, dst_path: str, type: Literal["v1", "v1"
     elif type == "v2":
         for identity_dir in os.listdir(path_to_dataset):
             identity_dir_full_path = f"{path_to_dataset}/{identity_dir}"
-            for image_path in os.listdir():
-                crop_images_in_folder(
-                    identity_dir_full_path, f"{output_path}/{identity_dir}", "v1"
-                )
+            crop_images_in_folder(
+                identity_dir_full_path, f"{output_path}/{identity_dir}", "v1"
+            )
 
 
 if __name__ == "__main__":
