@@ -2,5 +2,5 @@ definition:
   _target_: torchvision.transforms.v2.Compose
   transforms:
     - _target_: torchvision.transforms.v2.Resize
-      size: ${encoder.input_size}
+      size: [224, 224] 
     
