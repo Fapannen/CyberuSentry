@@ -139,7 +139,7 @@ def main(cfg: DictConfig):
         print(f"Epoch {epoch} train loss: {epoch_loss}")
 
         # For now save everything, I'm curious after each epoch
-        torch.save(encoder.state_dict(), f"model-{epoch}-{epoch_loss}.")
+        torch.save(encoder.state_dict(), f"model-{epoch}-train-{epoch_loss}.")
 
         # Run validation
         if epoch % cfg.validation_interval == 0:
@@ -180,6 +180,7 @@ def main(cfg: DictConfig):
 
                 # Save the model as best
                 torch.save(encoder.state_dict(), cfg.best_model_path)
+                torch.save(encoder.state_dict(), f"model-{epoch}-val-{val_loss}.")
             else:
                 validations_without_improvement += 1
                 if (
