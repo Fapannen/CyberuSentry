@@ -58,7 +58,7 @@ def main(cfg: DictConfig):
             cfg.batch_size,
             cfg.min_samples_per_id,
         ),
-    )  # TODO: Move sampler config to hydra
+    )
     val_dataloader = torch.utils.data.DataLoader(
         val_dataset,
         batch_sampler=IdentitySampler(
@@ -73,7 +73,26 @@ def main(cfg: DictConfig):
 
     start = 0 if cfg.restore_model is None else int(cfg.restore_model.split("-")[1]) + 1
 
+    changed_dataloaders = False
+
     for epoch in range(start, cfg.epochs):
+
+        # Edit settings if necessary
+
+        if epoch >= cfg.epoch_swap_to_hard and not changed_dataloaders:
+            # Once the 'semi-hard' triplet phase is done, we can move
+            # to bigger samples per id, because the computation gets
+            # significantly faster and we should utilize as much
+            # samples as possible.
+            train_dataloader = torch.utils.data.DataLoader(
+                train_dataset,
+                batch_sampler=IdentitySampler(
+                    train_datasets_len,
+                    cfg.batch_size,
+                    cfg.batch_size,
+                ),
+            )
+            changed_dataloaders = True
 
         # Determine the strategy of generating triplets
         if epoch < cfg.epoch_swap_to_hard:
@@ -188,7 +207,7 @@ def main(cfg: DictConfig):
                     >= cfg.validations_without_improvement
                 ):
                     print(
-                        f"No improvement for {cfg.validations_without_improvement} epochs. Terminating."
+                        f"No improvement for {cfg.validations_without_improvement} validations. Terminating."
                     )
                     return
 
