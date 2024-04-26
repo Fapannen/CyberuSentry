@@ -51,6 +51,7 @@ def main(cfg: DictConfig):
     train_dataset = ConcatDataset(train_datasets)
     val_dataset = ConcatDataset(val_datasets)
 
+    # Dataloaders
     train_dataloader = torch.utils.data.DataLoader(
         train_dataset,
         batch_sampler=IdentitySampler(
@@ -68,6 +69,7 @@ def main(cfg: DictConfig):
         ),
     )
 
+    # Tracking and progress settings
     validations_without_improvement = 0
     best_val_loss = torch.inf
 
