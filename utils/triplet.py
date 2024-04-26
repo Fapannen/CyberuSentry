@@ -112,8 +112,6 @@ def build_triplets(
                         dist(pos_emb1, neg_embs[k]) - dist(pos_emb1, pos_emb2)
                     ) < margin:
                         indices_satisfies_semihard.append(k)
-                        triplet = torch.stack((pos_emb1, pos_emb2, neg_embs[k]))
-                        triplets.append(triplet)
 
                 # Select the hardest negative, which still satisfies the semi-hard condition
                 # Hardest = closest to the anchor
