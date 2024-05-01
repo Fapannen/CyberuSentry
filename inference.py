@@ -210,7 +210,7 @@ def run_inference_image(
     )
 
     faces_mapped = [
-        (i, faces_cropped[i], model(faces_cropped[i]))
+        (i, faces_cropped[i], model(faces_cropped[i]).detach())
         for i in range(len(faces_cropped))
     ]
 
