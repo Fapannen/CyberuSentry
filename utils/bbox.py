@@ -23,15 +23,17 @@ def crop_bbox_from_image(
         min y coordinate value of the bbox
     ymax : int
         max y coordinate value of the bbox
+
+    Returns
+    -------
+    np.ndarray
+        Cropped image
     """
     xmin, xmax, ymin, ymax = int(xmin), int(xmax), int(ymin), int(ymax)
 
     xmin = xmin if xmin >= 0 else 0
-
     ymin = ymin if ymin >= 0 else 0
-
     xmax = xmax if xmax < img.shape[1] else img.shape[1] - 1
-
     ymax = ymax if ymax < img.shape[1] else img.shape[0] - 1
 
     return img[ymin:ymax, xmin:xmax, :]
