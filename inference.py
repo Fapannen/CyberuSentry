@@ -154,18 +154,31 @@ def run_inference_image(
     Parameters
     ----------
     model : str | torch.nn.Module
-        _description_
+        Model which is used to produce embeddings. Can be either
+        a string or an already instantiated torch Module. If it
+        is string, model is loaded from the provided checkpoint,
+        if it is an already instantiated torch Module, it is
+        used as is.
     image_path : str
-        _description_
+        Path to the image to be inferred
     save_face : bool, optional
-        _description_, by default True
+        Whether to save the cropped and inferred face into
+        'inference_output' directory. Useful when running testing
+        inference, but we dont want to save anything during ie.
+        gallery building.
     face_detector : torch.nn.Module | None, optional
-        _description_, by default None
+        Model which is used to detect the faces in the image.
+        Similarily to 'model', if it is an already instantiated
+        Module, it is used as is, otherwise a default MTCNN
+        detector is used.
 
     Returns
     -------
     dict[str, np.ndarray] | None
-        _description_
+        Mapping of {face_idx : face_embedding}. Face index consists
+        of the image name and the index of the face within that
+        specific image, so it is enough to distinguish different
+        faces from different images and also within a single image.
     """
 
     image_name = Path(image_path).stem

@@ -88,6 +88,27 @@ def build_uccs_gallery(
     model: str | torch.nn.Module,
     reduction=Literal["none", "avg"],
 ) -> dict[int, torch.Tensor]:
+    """Build the gallery for matching input images.
+
+    Parameters
+    ----------
+    path_to_gallery : str | Path
+        Path to the directory containing subject identity
+        directories with their images
+    model : str | torch.nn.Module
+        Model which is used to produce the face embeddings.
+        If it is a string, a new model is instantiated, otherwise
+        it is used as is
+    reduction : _type_, optional
+        How to merge the embeddings from a single identity.
+        avg: average the embeddings
+        none: return them all
+
+    Returns
+    -------
+    dict[int, torch.Tensor]
+        Mapping of {subject_id : reduced_embeddings}
+    """
     gallery = {}
 
     model = restore_model(model, device="cpu") if isinstance(model, str) else model
