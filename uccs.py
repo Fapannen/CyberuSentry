@@ -5,6 +5,7 @@ import os
 from tqdm import tqdm
 from typing import Literal
 import torch
+import argparse
 
 from tqdm import tqdm
 import pickle
@@ -15,7 +16,7 @@ from utils.bbox import crop_bbox_from_image
 from utils.model import restore_model
 
 
-def prepare_val_identities(path_to_uccs: str | Path, output_dir: str | Path):
+def prepare_val_identities(path_to_uccs: str | Path, output_dir: str | Path) -> None:
     """Generate a folder of cropped faces per identity to conform to
     FaceDataset class.
 
@@ -31,7 +32,10 @@ def prepare_val_identities(path_to_uccs: str | Path, output_dir: str | Path):
         'protocols' folder, containing the metadata csv file with bbox
         annotations.
     output_dir : str | Path
-        Where to store the results
+        Where to store the results. The output_dir will contain 1001 
+        directories with samples for each individual identity. For such
+        a structure, FaceDataset class is already prepared and easily
+        usable.
     """
     Path(output_dir).mkdir(exist_ok=True, parents=True)
     uccs_root = str(path_to_uccs)
@@ -156,9 +160,67 @@ def build_uccs_gallery(
     return gallery
 
 
-if __name__ == "__main__":
-    # prepare_val_identities("C:/data/UCCSChallenge", "C:/data/uccs_prep")
+def gallery_lookup(
+    gallery: dict[int, torch.Tensor], face_embedding: torch.Tensor, threshold=1.75
+) -> int:
+    """Take a given 'face_embedding' and match it against embeddings
+    in a 'gallery'. Return the id of the best match in the gallery,
+    if found, else -1, representing the unknown identity.
 
+    Distance from the face embedding to each identity in the gallery
+    is computed and the
+    sample with minimum distance is selected as best match. If the dist of
+    the best match is still higher than the threshold, it is considered an
+    unknown identity and -1 is returned.
+
+    Parameters
+    ----------
+    gallery : dict[int, torch.Tensor]
+        A dictionary of identities. For each identity in the gallery, there
+        is the identity's embedding stored, which is compared to the provided
+        face embedding.
+    face_embedding : torch.Tensor
+        The embedding from an inferred image. This is the vector that represents
+        the face from whatever image to be matched against known identities in the
+        gallery.
+    threshold : float, optional
+        Determines the threshold when the identity is matched or rejected.
+
+    Returns
+    -------
+    int
+        ID of the identity, if matched. The ID is a key in the provided gallery.
+        If no matches are found, -1 is returned.
+    """
+    gallery_embeddings = [gallery[subject] for subject in gallery]
+    gallery_embeddings = torch.stack(gallery_embeddings)
+
+    gallery_dists = torch.sum(
+        torch.square(torch.abs(gallery_embeddings - face_embedding)), dim=2
+    )
+
+    best_match = torch.argmin(gallery_dists, dim=0)
+
+    # Return the best matching ID from the gallery
+    # (Argmin is done on the embeddings, but the index in UCCS gallery
+    # starts with ID 1, not 0)
+    return (
+        list(gallery.keys())[best_match.item()]
+        if gallery_dists[best_match] <= threshold  #  If matches
+        else -1  # else unknown
+    )
+
+
+if __name__ == "__main__":
+    # ------------------------------------------------------------------
+    """ Prepare dataset with cropped faces
+    
+    prepare_val_identities("C:/data/UCCSChallenge", "C:/data/uccs_prep")
+    
+    """
+    # ------------------------------------------------------------------
+    """ Prepare Gallery
+    
     gallery_path = "C:/data/UCCSChallenge/gallery_images/gallery_images"
     model = "model-24-val-37.60191621913782"
     reduction = "avg"
@@ -167,3 +229,17 @@ if __name__ == "__main__":
 
     with open(f"gallery_{model.split(".")[0]}-{reduction}.pkl", "wb") as f:
         pickle.dump(gallery, f)
+    
+    """
+    # ------------------------------------------------------------------
+    """ Match random image to the UCCS gallery
+    
+    image_embedding = run_inference_image(
+        "model-24-val-37.60191621913782", "0052_2.png", False
+    )
+    image_embedding = image_embedding[list(image_embedding.keys())[0]]
+    gallery_file = open("gallery_model-24-val-37-avg.pkl", "rb")
+    gallery = pickle.load(gallery_file)
+    print(gallery_lookup(gallery, image_embedding))
+    
+    """
