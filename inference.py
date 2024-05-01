@@ -139,11 +139,90 @@ def get_cropped_faces(
     return cropped_faces
 
 
-def run_inference_images(model_path: str, img1: str, img2: str):
-    """Run inference on two images
+def run_inference_image(
+    model: str | torch.nn.Module,
+    image_path: str,
+    save_face: bool = True,
+    face_detector: torch.nn.Module | None = None,
+) -> dict[str, np.ndarray] | None:
+    """Function for a complete embedding extraction from an image.
+    Includes loading the model, loading the image, detecting faces,
+    cropping faces, embedding the faces and returning the produced
+    embeddings. The ouput is in a form of a dictionary of structure
+    {image_path_face_idx: embedding}
 
-    TODO: Decide whether the function should output the diffs or
-    the number of unique faces ...
+    Parameters
+    ----------
+    model : str | torch.nn.Module
+        _description_
+    image_path : str
+        _description_
+    save_face : bool, optional
+        _description_, by default True
+    face_detector : torch.nn.Module | None, optional
+        _description_, by default None
+
+    Returns
+    -------
+    dict[str, np.ndarray] | None
+        _description_
+    """
+
+    image_name = Path(image_path).stem
+
+    image: np.ndarray = read_image(image_path, convert_to_tensor=False, scale=False)
+
+    # If an instantiated model is passed, use that one.
+    # Otherwise use a default MTCNN detector
+    face_detector = fp.MTCNN() if face_detector is None else face_detector
+
+    # If an instantiated model is passed, use that one.
+    # Otherwise load a checkpoint
+    model = restore_model(model, device="cpu") if isinstance(model, str) else model
+
+    # Yields a tuple (bboxes, confidences)
+    # ie. ([[118.15, 93.5875, 498.784, 110.2]], [[98.587]])
+    # for a single detected face.
+    # bbox is a quadruple of floats representing the top-left
+    # and bottom-right coordinates of the bbox in the original
+    # image with no scaling
+    image_faces = face_detector.detect(image)
+    if image_faces[0] is None:
+        print(f"{image_path} has no faces detected ...")
+        return None
+
+    faces_cropped = get_cropped_faces(image_faces, image)
+    faces_cropped = list(
+        map(lambda x: numpy_to_model_format(x, add_batch_dim=True), faces_cropped)
+    )
+
+    faces_mapped = [
+        (i, faces_cropped[i], model(faces_cropped[i]))
+        for i in range(len(faces_cropped))
+    ]
+
+    # During inference on multiple images, we want to save the faces
+    # to manually inspect the results, however, when ie building
+    # gallery, we dont need the image saved.
+    if save_face:
+        for face_i, face_cropped, face_embedding in faces_mapped:
+            face_image_numpy = model_format_to_numpy(face_cropped)
+
+            Path("inference_output").mkdir(exist_ok=True, parents=True)
+            cv2.imwrite(
+                f"inference_output/{image_name}_{face_i}.jpg",
+                cv2.cvtColor(face_image_numpy, cv2.COLOR_RGB2BGR),
+            )
+
+    return {
+        f"{image_name}-{face_idx}": face_embedding
+        for face_idx, _, face_embedding in faces_mapped
+    }
+
+
+def run_inference_images(model_path: str, img1: str, img2: str):
+    """Run inference on two images and print out differences
+    between individual faces in both images.
 
     Parameters
     ----------
@@ -154,66 +233,37 @@ def run_inference_images(model_path: str, img1: str, img2: str):
     img2 : str
         Path to the second image
     """
-    img1: np.ndarray = read_image(img1, convert_to_tensor=False, scale=False)
-    img2: np.ndarray = read_image(img2, convert_to_tensor=False, scale=False)
-
-    fp_model = fp.MTCNN()
-
-    # Yields a tuple (bboxes, confidences)
-    # ie. ([[118.15, 93.5875, 498.784, 110.2]], [[98.587]])
-    # for a single detected face.
-    # bbox is a quadruple of floats representing the top-left
-    # and bottom-right coordinates of the bbox in the original
-    # image with no scaling
-    img1_faces = fp_model.detect(img1)
-    img2_faces = fp_model.detect(img2)
-
-    if img1_faces[0] is None or img2_faces[0] is None:
-        print("No faces detected in one of the images!")
-        print("Exitting ...")
-        return
-
-    img1_faces_cropped = get_cropped_faces(img1_faces, img1)
-    img2_faces_cropped = get_cropped_faces(img2_faces, img2)
-
-    faces_cropped = img1_faces_cropped + img2_faces_cropped
-    faces_cropped = list(
-        map(lambda x: numpy_to_model_format(x, add_batch_dim=True), faces_cropped)
-    )
 
     model = restore_model(model_path, device="cpu")
-    model.eval()
 
-    faces_mapped = [
-        (i, faces_cropped[i], model(faces_cropped[i]))
-        for i in range(len(faces_cropped))
-    ]
+    img1_faces_dict = run_inference_image(model, img1, save_face=True)
+    img2_faces_dict = run_inference_image(model, img2, save_face=True)
 
     # Store the diffs to sort them and display by similarity
     diffs = []
 
-    for face_i in range(len(faces_mapped)):
-        rest = [faces_mapped[j] for j in range(face_i + 1, len(faces_mapped))]
-        face1_idx, face1_cropped, face1_embed = faces_mapped[face_i]
+    all_faces = img2_faces_dict | img1_faces_dict
+    all_faces_ids = list(all_faces.keys())
+    print(all_faces_ids)
 
-        face_image_numpy = model_format_to_numpy(face1_cropped)
+    for face1_idx in range(len(all_faces_ids)):
+        face1_embed = all_faces[all_faces_ids[face1_idx]]
+        other_faces_ids = [
+            all_faces_ids[j] for j in range(face1_idx + 1, len(all_faces_ids))
+        ]
 
-        # Write the image to be able to identify the faces individually
-        Path("inference_output").mkdir(exist_ok=True, parents=True)
-        cv2.imwrite(
-            f"inference_output/Face_{face1_idx}.jpg",
-            cv2.cvtColor(face_image_numpy, cv2.COLOR_RGB2BGR),
-        )
+        for face2_idx in range(len(other_faces_ids)):
+            face2_embed = all_faces[other_faces_ids[face2_idx]]
 
-        for face2 in rest:
-            face2_idx, _, face2_embed = face2
             face_diff = torch.sum(torch.abs(face1_embed - face2_embed))
-            diffs.append((face1_idx, face2_idx, face_diff))
+            diffs.append(
+                (all_faces_ids[face1_idx], other_faces_ids[face2_idx], face_diff)
+            )
 
     diffs_sorted = list(sorted(diffs, key=lambda x: x[2]))
 
     for f1, f2, diff in diffs_sorted:
-        print(f"Difference of Face {f1} and {f2} = {diff}")
+        print(f"Difference of {f1} and {f2} = {diff}")
 
 
 if __name__ == "__main__":
