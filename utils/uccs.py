@@ -1,11 +1,10 @@
 import cv2
-import torch
-import numpy as np
 from pathlib import Path
 import pandas as pd
 import os
 from tqdm import tqdm
 
+from utils.bbox import crop_bbox_from_image
 
 def prepare_val_identities(path_to_uccs: str | Path, output_dir: str | Path):
     """Generate a folder of cropped faces per identity to conform to
@@ -58,27 +57,7 @@ def prepare_val_identities(path_to_uccs: str | Path, output_dir: str | Path):
                     face_y + face_h,
                 )
 
-                # Duplicate code from inference.py, #TODO clean before release
-                bb_xdiff = xmax - xmin
-                bb_ydiff = ymax - ymin
-
-                new_bb_xmin = int(xmin)
-                new_bb_xmin = new_bb_xmin if new_bb_xmin >= 0 else 0
-
-                new_bb_ymin = int(ymin)
-                new_bb_ymin = new_bb_ymin if new_bb_ymin >= 0 else 0
-
-                new_bb_xmax = int(xmax)
-                new_bb_xmax = (
-                    new_bb_xmax if new_bb_xmax < img.shape[1] else img.shape[1] - 1
-                )
-
-                new_bb_ymax = int(ymax)
-                new_bb_ymax = (
-                    new_bb_ymax if new_bb_ymax < img.shape[1] else img.shape[0] - 1
-                )
-
-                crop = img[new_bb_ymin:new_bb_ymax, new_bb_xmin:new_bb_xmax, :]
+                crop = crop_bbox_from_image(img, xmin, xmax, ymin, ymax)
 
                 Path(str(output_dir) + "/" + str(identity)).mkdir(
                     exist_ok=True, parents=True

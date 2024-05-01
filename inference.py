@@ -8,6 +8,7 @@ from pathlib import Path
 
 from utils.image import read_image, numpy_to_model_format, model_format_to_numpy
 from utils.model import restore_model
+from utils.bbox import crop_bbox_from_image
 
 from utils.triplet import dist
 
@@ -131,23 +132,7 @@ def get_cropped_faces(
     for face_bbox in detected_faces[0]:
         xmin, ymin, xmax, ymax = face_bbox
 
-        new_bb_xmin = int(xmin)
-        new_bb_xmin = new_bb_xmin if new_bb_xmin >= 0 else 0
-
-        new_bb_ymin = int(ymin)
-        new_bb_ymin = new_bb_ymin if new_bb_ymin >= 0 else 0
-
-        new_bb_xmax = int(xmax)
-        new_bb_xmax = (
-            new_bb_xmax if new_bb_xmax < image.shape[1] else image.shape[1] - 1
-        )
-
-        new_bb_ymax = int(ymax)
-        new_bb_ymax = (
-            new_bb_ymax if new_bb_ymax < image.shape[1] else image.shape[0] - 1
-        )
-
-        crop = image[new_bb_ymin:new_bb_ymax, new_bb_xmin:new_bb_xmax, :]
+        crop = crop_bbox_from_image(image, xmin, xmax, ymin, ymax)
 
         cropped_faces.append(crop)
 
