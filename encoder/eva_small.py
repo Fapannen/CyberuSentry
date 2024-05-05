@@ -11,4 +11,4 @@ class EvaSmall(nn.Module):
         )
 
     def forward(self, x):
-        return self.model(x)
+        return nn.Tanh(self.model(x))

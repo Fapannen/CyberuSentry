@@ -147,7 +147,17 @@ def main(cfg: DictConfig):
                 margin=cfg.loss.definition.margin,
             )
 
-            loss = loss_fn(triplets[0], triplets[1], triplets[2])
+            if isinstance(loss, torch.nn.TripletMarginLoss):
+                # Distance-based loss
+                loss = loss_fn(triplets[0], triplets[1], triplets[2])
+            elif isinstance(loss, torch.nn.CosineEmbeddingLoss):
+                # Cosine distance based loss
+                loss = loss_fn(
+                    triplets[0], triplets[1], torch.ones(len(triplets[0])).to(device)
+                ) + loss_fn(
+                    triplets[0], triplets[2], -torch.ones(len(triplets[0])).to(device)
+                )
+
             print(f"loss: {loss.detach().cpu().item()}")
             if i % 100 == 0:
                 print(pos_emb[0])
@@ -188,7 +198,16 @@ def main(cfg: DictConfig):
                     margin=cfg.loss.definition.margin,
                 )
 
-                loss = loss_fn(triplets[0], triplets[1], triplets[2])
+                if isinstance(loss, torch.nn.TripletMarginLoss):
+                    # Distance-based loss
+                    loss = loss_fn(triplets[0], triplets[1], triplets[2])
+                elif isinstance(loss, torch.nn.CosineEmbeddingLoss):
+                    # Cosine distance based loss
+                    loss = loss_fn(
+                        triplets[0], triplets[1], torch.ones(len(triplets[0])).to(device)
+                    ) + loss_fn(
+                        triplets[0], triplets[2], -torch.ones(len(triplets[0])).to(device)
+                    )
 
                 val_loss += loss.detach().cpu().item()
 

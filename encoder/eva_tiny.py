@@ -10,4 +10,7 @@ class EvaTiny(nn.Module):
         )
 
     def forward(self, x):
-        return self.model(x)
+        # Bound values to (-1, 1), pure outputs from
+        # the model are unbounded, which can be
+        # unstable when computing distances.
+        return nn.Tanh(self.model(x))
