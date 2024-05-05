@@ -7,10 +7,13 @@ class EuclideanDistance:
 
 
 class CosineDistance:
+    def __init__(self) -> None:
+        self.fn = torch.nn.CosineSimilarity()
+
     def __call__(self, a, b):
         if len(a.shape) == 1:
             a = a.unsqueeze(0)
         if len(b.shape) == 1:
             b = b.unsqueeze(0)
-            
-        return torch.nn.CosineSimilarity()(a, b)
+
+        return self.fn(a, b)

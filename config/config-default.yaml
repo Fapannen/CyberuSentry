@@ -4,8 +4,8 @@ defaults:
   - datasets: default
   - augmentations: default
   - transforms: default
-  - loss: triplet
-  - dist_fn: euclidean
+  - loss: cosine
+  - dist_fn: cosine
   - optimizer: adamw
 
 batch_size: 32

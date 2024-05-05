@@ -152,10 +152,10 @@ def main(cfg: DictConfig):
             )
 
             if isinstance(loss_fn, torch.nn.TripletMarginLoss):
-                # Distance-based loss
+                # EuclideanDistance-based loss
                 loss = loss_fn(triplets[0], triplets[1], triplets[2])
             elif isinstance(loss_fn, torch.nn.CosineEmbeddingLoss):
-                # Cosine distance based loss
+                # CosineDistance-based loss
                 loss = loss_fn(
                     triplets[0], triplets[1], torch.ones(len(triplets[0])).to(device)
                 ) + loss_fn(
@@ -204,14 +204,18 @@ def main(cfg: DictConfig):
                 )
 
                 if isinstance(loss, torch.nn.TripletMarginLoss):
-                    # Distance-based loss
+                    # EuclideanDistance-based loss
                     loss = loss_fn(triplets[0], triplets[1], triplets[2])
                 elif isinstance(loss, torch.nn.CosineEmbeddingLoss):
-                    # Cosine distance based loss
+                    # CosineDistance-based loss
                     loss = loss_fn(
-                        triplets[0], triplets[1], torch.ones(len(triplets[0])).to(device)
+                        triplets[0],
+                        triplets[1],
+                        torch.ones(len(triplets[0])).to(device),
                     ) + loss_fn(
-                        triplets[0], triplets[2], -torch.ones(len(triplets[0])).to(device)
+                        triplets[0],
+                        triplets[2],
+                        -torch.ones(len(triplets[0])).to(device),
                     )
 
                 val_loss += loss.detach().cpu().item()
