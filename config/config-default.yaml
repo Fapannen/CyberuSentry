@@ -5,6 +5,7 @@ defaults:
   - augmentations: default
   - transforms: default
   - loss: triplet
+  - dist_fn: euclidean
   - optimizer: adamw
 
 batch_size: 32

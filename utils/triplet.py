@@ -1,15 +1,12 @@
 import torch
-from typing import Literal
-
-
-def dist(a, b):
-    return torch.sum(torch.square(torch.abs(a - b))).item()
+from typing import Literal, Callable
 
 
 def build_triplets(
     pos_embs: torch.Tensor,
     neg_embs: torch.Tensor,
     min_samples_per_id: int,
+    dist_fn : Callable,
     triplet_setting=Literal["semi-hard", "hard", "batch-hard"],
     margin: float = 0.2,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -39,6 +36,10 @@ def build_triplets(
     min_samples_per_id : int
         Number of minimal samples per identity that
         are to be present within a batch.
+
+    dist_fn : Callable
+        A callable accepting two tensors and returning the
+        distance between these two tensors.
 
     triplet_setting : Literal["semi-hard", "hard", "batch-hard"]
         The strategy of generating the triplets.
@@ -75,7 +76,7 @@ def build_triplets(
 
     # batch-hard requires a little different logic
     if triplet_setting == "batch-hard":
-        return build_batch_hard_triplets(pos_embs, neg_embs, min_samples_per_id)
+        return build_batch_hard_triplets(pos_embs, neg_embs, min_samples_per_id, dist_fn)
 
     triplets = []
 
@@ -108,8 +109,8 @@ def build_triplets(
                     # THEN
                     # This combination is semi-hard because it is correctly ordered, but we wanna
                     # push them apart a little.
-                    if (dist(pos_emb1, pos_emb2) < dist(pos_emb1, neg_embs[k])) and abs(
-                        dist(pos_emb1, neg_embs[k]) - dist(pos_emb1, pos_emb2)
+                    if (dist_fn(pos_emb1, pos_emb2) < dist_fn(pos_emb1, neg_embs[k])) and abs(
+                        dist_fn(pos_emb1, neg_embs[k]) - dist_fn(pos_emb1, pos_emb2)
                     ) < margin:
                         indices_satisfies_semihard.append(k)
 
@@ -122,8 +123,8 @@ def build_triplets(
                         index=torch.tensor(indices_satisfies_semihard).cuda(),
                     )
                     hardest_satisfying_negative = torch.argmin(
-                        torch.sum(torch.abs(semi_hard_neg_embeds - pos_embs[i]))
-                    )
+                        dist_fn(semi_hard_neg_embeds, pos_embs[i])
+                    ).item()
                     triplet = torch.stack(
                         (
                             pos_emb1,
@@ -153,7 +154,7 @@ def build_triplets(
                 # Determine which of the negatives is the hardest. The index is however
                 # to "negatives_indices", not to neg_embs yet!
                 hardest_negative_idx = torch.argmin(
-                    torch.sum(torch.abs(negatives_to_identity - pos_embs[i]), dim=1)
+                    dist_fn(negatives_to_identity, pos_embs[i])
                 ).item()
 
                 triplet = torch.stack(
@@ -172,7 +173,7 @@ def build_batch_hard_triplets(
     pos_embs: torch.Tensor,
     neg_embs: torch.Tensor,
     min_samples_per_id: int,
-    margin: int = 0.2,
+    dist_fn : Callable,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     triplets = []
 
@@ -191,7 +192,7 @@ def build_batch_hard_triplets(
 
         # Determine the index of the hardest positive
         hardest_positive_idx = torch.argmax(
-            torch.sum(torch.abs(other_positives_embeds - pos_embs[i]), dim=1)
+            dist_fn(other_positives_embeds, pos_embs[i])
         ).item()
 
         # Save the hardest positive
@@ -209,7 +210,7 @@ def build_batch_hard_triplets(
 
         # Determine which of the negatives is the hardest.
         hardest_negative_idx = torch.argmin(
-            torch.sum(torch.abs(negatives_to_identity - pos_embs[i]), dim=1)
+            dist_fn(negatives_to_identity, pos_embs[i])
         ).item()
 
         triplet = torch.stack(

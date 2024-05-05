@@ -33,6 +33,9 @@ def main(cfg: DictConfig):
     augs = hydra.utils.instantiate(cfg.augmentations.definition)
     transforms = hydra.utils.instantiate(cfg.transforms.definition)
 
+    # Distance function
+    dist_fn = hydra.utils.instantiate(cfg.dist_fn.definition)
+
     # Dataset-specific definitions
     train_datasets = [
         hydra.utils.instantiate(
@@ -143,14 +146,15 @@ def main(cfg: DictConfig):
                 pos_emb,
                 neg_emb,
                 cfg.min_samples_per_id,
+                dist_fn,
                 triplet_setting=triplet_setting,
                 margin=cfg.loss.definition.margin,
             )
 
-            if isinstance(loss, torch.nn.TripletMarginLoss):
+            if isinstance(loss_fn, torch.nn.TripletMarginLoss):
                 # Distance-based loss
                 loss = loss_fn(triplets[0], triplets[1], triplets[2])
-            elif isinstance(loss, torch.nn.CosineEmbeddingLoss):
+            elif isinstance(loss_fn, torch.nn.CosineEmbeddingLoss):
                 # Cosine distance based loss
                 loss = loss_fn(
                     triplets[0], triplets[1], torch.ones(len(triplets[0])).to(device)
@@ -194,6 +198,7 @@ def main(cfg: DictConfig):
                     pos_emb,
                     neg_emb,
                     cfg.min_samples_per_id,
+                    dist_fn,
                     triplet_setting="hard",
                     margin=cfg.loss.definition.margin,
                 )

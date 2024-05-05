@@ -15,6 +15,8 @@ from inference import run_inference_image
 from utils.bbox import crop_bbox_from_image
 from utils.model import restore_model
 
+from dist_fn.distances import CosineDistance, EuclideanDistance
+
 
 def prepare_val_identities(path_to_uccs: str | Path, output_dir: str | Path) -> None:
     """Generate a folder of cropped faces per identity to conform to
@@ -161,7 +163,7 @@ def build_uccs_gallery(
 
 
 def gallery_lookup(
-    gallery: dict[int, torch.Tensor], face_embedding: torch.Tensor, threshold=1.75
+    gallery: dict[int, torch.Tensor], face_embedding: torch.Tensor, dist_fn : str, threshold=1.75
 ) -> int:
     """Take a given 'face_embedding' and match it against embeddings
     in a 'gallery'. Return the id of the best match in the gallery,
@@ -183,6 +185,9 @@ def gallery_lookup(
         The embedding from an inferred image. This is the vector that represents
         the face from whatever image to be matched against known identities in the
         gallery.
+    dist_fn
+        Method of computing the distance between face embeddings. Can be either
+        "cosine" or "euclidean".
     threshold : float, optional
         Determines the threshold when the identity is matched or rejected.
 
@@ -195,9 +200,14 @@ def gallery_lookup(
     gallery_embeddings = [gallery[subject] for subject in gallery]
     gallery_embeddings = torch.stack(gallery_embeddings)
 
-    gallery_dists = torch.sum(
-        torch.square(torch.abs(gallery_embeddings - face_embedding)), dim=2
-    )
+    distance_func = EuclideanDistance() if dist_fn == "euclidean" else CosineDistance()
+
+    print(gallery_embeddings.shape)
+    print(face_embedding.shape)
+
+    gallery_dists = torch.tensor([distance_func(subject_embedding,  face_embedding) for subject_embedding in gallery_embeddings])
+
+    print(gallery_dists)
 
     best_match = torch.argmin(gallery_dists, dim=0)
 
@@ -231,15 +241,14 @@ if __name__ == "__main__":
         pickle.dump(gallery, f)
     
     """
-    # ------------------------------------------------------------------
-    """ Match random image to the UCCS gallery
-    
+    # ------------------------------------------------------------------  
+    """ Search an identity from an image in UCCS gallery
+
     image_embedding = run_inference_image(
-        "model-24-val-37.60191621913782", "0052_2.png", False
+        "model-24-val-37.60191621913782", "img/obama.jpg", False
     )
     image_embedding = image_embedding[list(image_embedding.keys())[0]]
     gallery_file = open("gallery_model-24-val-37-avg.pkl", "rb")
     gallery = pickle.load(gallery_file)
-    print(gallery_lookup(gallery, image_embedding))
-    
+    print(gallery_lookup(gallery, image_embedding, "euclidean"))
     """

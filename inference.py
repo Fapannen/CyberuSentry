@@ -10,11 +10,11 @@ from utils.image import read_image, numpy_to_model_format, model_format_to_numpy
 from utils.model import restore_model
 from utils.bbox import crop_bbox_from_image
 
-from utils.triplet import dist
+from dist_fn.distances import EuclideanDistance, CosineDistance
 
 
 def run_inference_video(
-    model_path, video_path, each_nth_frame=30, unique_dist_threshold=0.5
+    model_path, video_path, dist_fn, each_nth_frame=30, unique_dist_threshold=0.5
 ):
     video = cv2.VideoCapture(video_path)
     video_at = 0
@@ -33,6 +33,8 @@ def run_inference_video(
     video_output_dir_path = Path(f"video_inference_output/{Path(video_path).stem}")
     # .absolute() Issues on windows :)))
     video_output_dir_path.mkdir(exist_ok=True, parents=True)
+
+    distance_func = EuclideanDistance() if dist_fn == "euclidean" else CosineDistance()
 
     while video.isOpened():
         ret, frame = video.read()
@@ -64,7 +66,7 @@ def run_inference_video(
 
                     for unique in uniques:
                         if (
-                            dist(face_embed, uniques[unique][0])
+                            distance_func(face_embed, uniques[unique][0]).item()
                             <= unique_dist_threshold
                         ):
 
@@ -233,7 +235,7 @@ def run_inference_image(
     }
 
 
-def run_inference_images(model_path: str, img1: str, img2: str):
+def run_inference_images(model_path: str, img1: str, img2: str, dist_fn: str):
     """Run inference on two images and print out differences
     between individual faces in both images.
 
@@ -245,7 +247,11 @@ def run_inference_images(model_path: str, img1: str, img2: str):
         Path to the first image
     img2 : str
         Path to the second image
+    dist_fn: str
+        "euclidean" or "cosine"
     """
+
+    distance_func = EuclideanDistance() if dist_fn == "euclidean" else CosineDistance()
 
     model = restore_model(model_path, device="cpu")
 
@@ -268,7 +274,7 @@ def run_inference_images(model_path: str, img1: str, img2: str):
         for face2_idx in range(len(other_faces_ids)):
             face2_embed = all_faces[other_faces_ids[face2_idx]]
 
-            face_diff = torch.sum(torch.abs(face1_embed - face2_embed))
+            face_diff = distance_func(face1_embed, face2_embed)
             diffs.append(
                 (all_faces_ids[face1_idx], other_faces_ids[face2_idx], face_diff)
             )
@@ -276,7 +282,7 @@ def run_inference_images(model_path: str, img1: str, img2: str):
     diffs_sorted = list(sorted(diffs, key=lambda x: x[2]))
 
     for f1, f2, diff in diffs_sorted:
-        print(f"Difference of {f1} and {f2} = {diff}")
+        print(f"{distance_func.__class__.__name__} of {f1} and {f2} = {diff}")
 
 
 if __name__ == "__main__":
@@ -296,6 +302,9 @@ if __name__ == "__main__":
         "-t", "--threshold", action="store", dest="threshold", default=1.0, type=float
     )
     parser.add_argument(
+        "-d", "--distance", action="store", dest="dist_fn", required=True, type=str
+    )
+    parser.add_argument(
         "-f",
         "--frames-to-skip",
         action="store",
@@ -312,12 +321,13 @@ if __name__ == "__main__":
         run_inference_video(
             args.model_path,
             args.video_path,
+            args.dist_fn,
             each_nth_frame=args.frames_to_skip,
             unique_dist_threshold=args.threshold,
         )
 
     elif args.img1 is not None and args.img2 is not None:
-        run_inference_images(args.model_path, args.img1, args.img2)
+        run_inference_images(args.model_path, args.img1, args.img2, args.dist_fn)
 
     else:
         print("Unrecognized combination of arguments, exitting ...")
