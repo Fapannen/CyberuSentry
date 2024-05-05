@@ -86,9 +86,6 @@ class FaceDataset(Dataset):
         # Represent one epoch as one cycle per each "usable" identity
         return self.num_mto_identities
 
-    def get_identities(self):
-        return self.mto_identities.copy()
-
     def get_same_identity_tuple(self, origin_identity: int) -> tuple[str, str]:
         """Construct a tuple (img, img) of images of the same identity.
 

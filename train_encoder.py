@@ -48,8 +48,8 @@ def main(cfg: DictConfig):
         for dataset in cfg.datasets.definition
     ]
 
-    train_datasets_len = sum([len(d.get_identities()) for d in train_datasets])
-    val_datasets_len = sum([len(d.get_identities()) for d in val_datasets])
+    train_datasets_len = sum([len(dataset) for dataset in train_datasets])
+    val_datasets_len = sum([len(dataset) for dataset in val_datasets])
 
     train_dataset = ConcatDataset(train_datasets)
     val_dataset = ConcatDataset(val_datasets)
