@@ -16,4 +16,5 @@ class CosineDistance:
         if len(b.shape) == 1:
             b = b.unsqueeze(0)
 
-        return self.fn(a, b)
+        # Distance = 1 - similarity
+        return 1.0 - self.fn(a, b)
