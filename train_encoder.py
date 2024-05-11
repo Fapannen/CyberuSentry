@@ -178,68 +178,69 @@ def main(cfg: DictConfig):
 
         # Run validation
         if epoch % cfg.validation_interval == 0:
-            val_loss = 0
-            encoder.eval()
-            for i, batch in enumerate(
-                tqdm(val_dataloader, desc=f"epoch {epoch} val loop")
-            ):
-
-                pos, neg = batch
-
-                pos = pos.to(device)
-                neg = neg.to(device)
-
-                pos_emb = encoder(pos)
-                neg_emb = encoder(neg)
-
-                # As recommended, evaluate on hard only
-                # to see the improvements
-                triplets = build_triplets(
-                    pos_emb,
-                    neg_emb,
-                    cfg.min_samples_per_id,
-                    dist_fn,
-                    triplet_setting="hard",
-                    margin=cfg.loss.definition.margin,
-                )
-
-                if isinstance(loss, torch.nn.TripletMarginLoss):
-                    # EuclideanDistance-based loss
-                    loss = loss_fn(triplets[0], triplets[1], triplets[2])
-                elif isinstance(loss, torch.nn.CosineEmbeddingLoss):
-                    # CosineDistance-based loss
-                    loss = loss_fn(
-                        triplets[0],
-                        triplets[1],
-                        torch.ones(len(triplets[0])).to(device),
-                    ) + loss_fn(
-                        triplets[0],
-                        triplets[2],
-                        -torch.ones(len(triplets[0])).to(device),
-                    )
-
-                val_loss += loss.detach().cpu().item()
-
-            print(f"Epoch {epoch} val loss: {val_loss}")
-
-            if val_loss < best_val_loss:
-                print(f"Val loss improved from {best_val_loss} to {val_loss}")
-                best_val_loss = val_loss
-                validations_without_improvement = 0
-
-                # Save the model as best
-                torch.save(encoder.state_dict(), cfg.best_model_path)
-                torch.save(encoder.state_dict(), f"model-{epoch}-val-{val_loss}.")
-            else:
-                validations_without_improvement += 1
-                if (
-                    validations_without_improvement
-                    >= cfg.validations_without_improvement
+            with torch.no_grad():
+                val_loss = 0
+                encoder.eval()
+                for i, batch in enumerate(
+                    tqdm(val_dataloader, desc=f"epoch {epoch} val loop")
                 ):
-                    print(
-                        f"No improvement for {cfg.validations_without_improvement} validations. Terminating."
+
+                    pos, neg = batch
+
+                    pos = pos.to(device)
+                    neg = neg.to(device)
+
+                    pos_emb = encoder(pos)
+                    neg_emb = encoder(neg)
+
+                    # As recommended, evaluate on hard only
+                    # to see the improvements
+                    triplets = build_triplets(
+                        pos_emb,
+                        neg_emb,
+                        cfg.min_samples_per_id,
+                        dist_fn,
+                        triplet_setting="hard",
+                        margin=cfg.loss.definition.margin,
                     )
-                    return
+
+                    if isinstance(loss, torch.nn.TripletMarginLoss):
+                        # EuclideanDistance-based loss
+                        loss = loss_fn(triplets[0], triplets[1], triplets[2])
+                    elif isinstance(loss, torch.nn.CosineEmbeddingLoss):
+                        # CosineDistance-based loss
+                        loss = loss_fn(
+                            triplets[0],
+                            triplets[1],
+                            torch.ones(len(triplets[0])).to(device),
+                        ) + loss_fn(
+                            triplets[0],
+                            triplets[2],
+                            -torch.ones(len(triplets[0])).to(device),
+                        )
+
+                    val_loss += loss.detach().cpu().item()
+
+                print(f"Epoch {epoch} val loss: {val_loss}")
+
+                if val_loss < best_val_loss:
+                    print(f"Val loss improved from {best_val_loss} to {val_loss}")
+                    best_val_loss = val_loss
+                    validations_without_improvement = 0
+
+                    # Save the model as best
+                    torch.save(encoder.state_dict(), cfg.best_model_path)
+                    torch.save(encoder.state_dict(), f"model-{epoch}-val-{val_loss}.")
+                else:
+                    validations_without_improvement += 1
+                    if (
+                        validations_without_improvement
+                        >= cfg.validations_without_improvement
+                    ):
+                        print(
+                            f"No improvement for {cfg.validations_without_improvement} validations. Terminating."
+                        )
+                        return
 
 
 if __name__ == "__main__":
