@@ -6,14 +6,17 @@ from tqdm import tqdm
 from typing import Literal
 import torch
 import argparse
+import numpy as np
+import copy
 
 from tqdm import tqdm
 import pickle
 import facenet_pytorch as fp
 
-from inference import run_inference_image
-from utils.bbox import crop_bbox_from_image
+from inference import run_inference_image, get_cropped_faces
+from utils.image import read_image, numpy_to_model_format, model_format_to_numpy
 from utils.model import restore_model
+from utils.bbox import crop_bbox_from_image
 
 from dist_fn.distances import CosineDistance, EuclideanDistance
 
@@ -162,18 +165,22 @@ def build_uccs_gallery(
     return gallery
 
 
-def gallery_lookup(
-    gallery: dict[int, torch.Tensor], face_embedding: torch.Tensor, dist_fn : str, threshold=1.75
-) -> int:
+def gallery_distance(
+    gallery: dict[int, torch.Tensor], face_embedding: torch.Tensor, dist_fn : str, eucl_dist_thr : float = None, w : float = None, c : float = None
+) -> torch.Tensor:
     """Take a given 'face_embedding' and match it against embeddings
-    in a 'gallery'. Return the id of the best match in the gallery,
-    if found, else -1, representing the unknown identity.
+    in a 'gallery'. Return the computed distances of the face_embed
+    compared to all subjects in the gallery.
 
-    Distance from the face embedding to each identity in the gallery
-    is computed and the
-    sample with minimum distance is selected as best match. If the dist of
-    the best match is still higher than the threshold, it is considered an
-    unknown identity and -1 is returned.
+    In case of euclidean distance as the distance function, the
+    distances are first max-normalized into [0, 1] range and then
+    the "matching" subjects are selected depending on a threshold.
+    Subjects with distance lower than threshold are considered matching,
+    subjects with distance larger than threshold are considered non-matching.
+
+    Output from this function is a torch.Tensor containing the distances
+    of the provided face embed to all face embeddings in the gallery and
+    the values are in the [0, 1] range.
 
     Parameters
     ----------
@@ -188,37 +195,104 @@ def gallery_lookup(
     dist_fn
         Method of computing the distance between face embeddings. Can be either
         "cosine" or "euclidean".
-    threshold : float, optional
-        Determines the threshold when the identity is matched or rejected.
+    eucl_dist_thr
+        Used in the case of euclidean distance function. Determines the threshold
+        under which the distances are considered matching
+    w
+        Controls the value at which the non-matching samples scores start
+    c
+        Controls the scale of the diminishing of scores in the case of non-matching
+        samples
 
     Returns
     -------
-    int
-        ID of the identity, if matched. The ID is a key in the provided gallery.
-        If no matches are found, -1 is returned.
+    torch.Tensor
+        Tensor of distances of the embedding to all subjects in the gallery
     """
     gallery_embeddings = [gallery[subject] for subject in gallery]
     gallery_embeddings = torch.stack(gallery_embeddings)
 
     distance_func = EuclideanDistance() if dist_fn == "euclidean" else CosineDistance()
 
-    print(gallery_embeddings.shape)
-    print(face_embedding.shape)
+    gallery_dists = torch.tensor([distance_func(subject_embedding,  face_embedding).detach().item() for subject_embedding in gallery_embeddings], requires_grad=False)
+    
+    if dist_fn == "euclidean":
+        max_dist = torch.max(gallery_dists).item()
+        gallery_dists /= max_dist
+        threshold = eucl_dist_thr / max_dist if eucl_dist_thr > 1.0 else eucl_dist_thr
+        gallery_dists = torch.tensor([1 / (1 + score) if score <= threshold else w / (c * score) for score in gallery_dists.numpy()],requires_grad=False)
+    
+    return gallery_dists
 
-    gallery_dists = torch.tensor([distance_func(subject_embedding,  face_embedding) for subject_embedding in gallery_embeddings])
+def uccs_image_inference(gallery, model, image_path, dist_fn : str, eucl_dist_thr : float = 0.2, w : float = 0.4, c : float = 4.0) -> str:
+    """Perform an inference on an image and output
+    a string representing rows in the submission
+    file.
 
-    print(gallery_dists)
+    # TODO: Docstrings
 
-    best_match = torch.argmin(gallery_dists, dim=0)
+    Parameters
+    ----------
+    gallery : dict[int, torch.Tensor]
+        A dictionary of identities. For each identity in the gallery, there
+        is the identity's embedding stored, which is compared to the provided
+        face embedding.
+    model : nn.Module
+        Model that should be used for the inference
+    image_path : str
+        Path to the image to be inferred
+    dist_fn
+        Which distance function to use when computing gallery similarity
+    """
+    image = read_image(image_path, convert_to_tensor=False, scale=False)
 
-    # Return the best matching ID from the gallery
-    # (Argmin is done on the embeddings, but the index in UCCS gallery
-    # starts with ID 1, not 0)
-    return (
-        list(gallery.keys())[best_match.item()]
-        if gallery_dists[best_match] <= threshold  #  If matches
-        else -1  # else unknown
+    # Init same settings as UCCS baseline detector
+    face_detector = fp.MTCNN(thresholds=[0.2, 0.2, 0.2])
+
+    image_faces, confidences = face_detector.detect(image)
+    if image_faces is None:
+        print(f"{image_path} has no faces detected ...")
+        return ""
+
+    faces_cropped = get_cropped_faces([image_faces], image)
+    faces_cropped = list(
+        map(lambda x: numpy_to_model_format(x, add_batch_dim=True), faces_cropped)
     )
+
+    faces_mapped = [
+        (i, faces_cropped[i], model(faces_cropped[i]).detach(), image_faces[i], confidences[i])
+        for i in range(len(faces_cropped))
+    ]
+
+    ret_str = ""
+
+    for _, _, face_embed, face_bbox, detection_score in faces_mapped:
+        if dist_fn == "euclidean":
+            gallery_distances = gallery_distance(gallery, face_embed, dist_fn, eucl_dist_thr=eucl_dist_thr, w=w, c=c)
+        else:
+            gallery_distances = gallery_distance(gallery, face_embed, dist_fn)
+
+        xmin, ymin, xmax, ymax = face_bbox
+        x1 = xmin
+        y1 = ymin
+        width = xmax - xmin
+        height = ymax - ymin
+
+        # Format of the submission file is
+        # FILE, DET_SCORE, BBX, BBY, BBW, BBH, S0001, ..., S1000
+        ret_str += f"{image_path.split('/')[-1]},{detection_score},{x1},{y1},{width},{height},{','.join([str(dist) for dist in gallery_distances.detach().cpu().numpy()])}\n"
+
+    return ret_str
+
+
+
+
+
+    
+
+    
+
+
 
 
 if __name__ == "__main__":
@@ -252,3 +326,11 @@ if __name__ == "__main__":
     gallery = pickle.load(gallery_file)
     print(gallery_lookup(gallery, image_embedding, "euclidean"))
     """
+    # ------------------------------------------------------------------
+    # UCCS image inference
+
+    model = restore_model("model-24-val-37.60191621913782")
+    image_path = "img/obama.jpg"
+    gallery_file = open("gallery_model-24-val-37-avg.pkl", "rb")
+    gallery = pickle.load(gallery_file)
+    print(uccs_image_inference(gallery, model, image_path, "cosine"))
