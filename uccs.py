@@ -214,21 +214,13 @@ def gallery_distance(
 
     distance_func = EuclideanDistance() if dist_fn == "euclidean" else CosineDistance()
 
-    gallery_dists = torch.tensor([distance_func(subject_embedding,  face_embedding).cpu().detach().item() for subject_embedding in gallery_embeddings], requires_grad=False)
+    gallery_dists = torch.tensor([distance_func(subject_embedding,  face_embedding).detach().item() for subject_embedding in gallery_embeddings], requires_grad=False)
     
     if dist_fn == "euclidean":
         max_dist = torch.max(gallery_dists).item()
         gallery_dists /= max_dist
         threshold = eucl_dist_thr / max_dist if eucl_dist_thr > 1.0 else eucl_dist_thr
-
-        print("pre:", gallery_dists)
-        for idx, score in enumerate(gallery_dists):
-            if score <= threshold:
-                gallery_dists[idx] = 1 / (1 + score)
-            else:
-                gallery_dists[idx] = w / (c * score)
-        print("post", gallery_dists)
-        print()
+        gallery_dists = torch.tensor([1 / (1 + score) if score <= threshold else w / (c * score) for score in gallery_dists.numpy()],requires_grad=False)
     
     return gallery_dists
 
@@ -283,12 +275,12 @@ def uccs_image_inference(gallery, model, image_path, dist_fn : str, eucl_dist_th
         xmin, ymin, xmax, ymax = face_bbox
         x1 = xmin
         y1 = ymin
-        w = xmax - xmin
-        h = ymax - ymin
+        width = xmax - xmin
+        height = ymax - ymin
 
         # Format of the submission file is
         # FILE, DET_SCORE, BBX, BBY, BBW, BBH, S0001, ..., S1000
-        ret_str += f"{image_path.split('/')[-1]},{detection_score},{x1},{y1},{w},{h},{','.join([str(dist) for dist in gallery_distances.detach().cpu().numpy()])}\n"
+        ret_str += f"{image_path.split('/')[-1]},{detection_score},{x1},{y1},{width},{height},{','.join([str(dist) for dist in gallery_distances.detach().cpu().numpy()])}\n"
 
     return ret_str
 
@@ -341,4 +333,4 @@ if __name__ == "__main__":
     image_path = "img/obama.jpg"
     gallery_file = open("gallery_model-24-val-37-avg.pkl", "rb")
     gallery = pickle.load(gallery_file)
-    uccs_image_inference(gallery, model, image_path, "euclidean")
+    print(uccs_image_inference(gallery, model, image_path, "cosine"))
