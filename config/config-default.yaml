@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - encoder: eva_tiny
+  - encoder: efficientnet-b0
   - datasets: default
   - augmentations: default
   - transforms: default
@@ -13,7 +13,7 @@ epochs: 100
 validation_interval: 2
 validations_without_improvement: 3
 epoch_swap_to_hard: 5
-epoch_swap_to_batch_hard: 20
+epoch_swap_to_batch_hard: 30
 best_model_path: "best.ckpt"
 min_samples_per_id: 8   # only for semihard pretraining, then gets set to batch size
 
