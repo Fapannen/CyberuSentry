@@ -303,10 +303,10 @@ if __name__ == "__main__":
     
     """
     # ------------------------------------------------------------------
-    """ Prepare Gallery
-    
+    #Prepare Gallery
+    """
     gallery_path = "C:/data/UCCSChallenge/gallery_images/gallery_images"
-    model = "model-24-val-37.60191621913782"
+    model = "model-32-val-128.81810501217842"
     reduction = "avg"
 
     gallery = build_uccs_gallery(gallery_path, model, reduction)
@@ -316,21 +316,23 @@ if __name__ == "__main__":
     
     """
     # ------------------------------------------------------------------  
-    """ Search an identity from an image in UCCS gallery
+    #Search an identity from an image in UCCS gallery
 
     image_embedding = run_inference_image(
-        "model-24-val-37.60191621913782", "img/obama.jpg", False
+        "model-32-val-128.81810501217842", "1000_3.png", False
     )
     image_embedding = image_embedding[list(image_embedding.keys())[0]]
-    gallery_file = open("gallery_model-24-val-37-avg.pkl", "rb")
+    gallery_file = open("gallery_model-32-val-128-avg.pkl", "rb")
     gallery = pickle.load(gallery_file)
-    print(gallery_lookup(gallery, image_embedding, "euclidean"))
-    """
+    print(torch.argmin(gallery_distance(gallery, image_embedding, "cosine")))
+    
     # ------------------------------------------------------------------
+    """
     # UCCS image inference
 
-    model = restore_model("model-24-val-37.60191621913782")
+    model = restore_model("model-30-train-6585.611407843418")
     image_path = "img/obama.jpg"
     gallery_file = open("gallery_model-24-val-37-avg.pkl", "rb")
     gallery = pickle.load(gallery_file)
     print(uccs_image_inference(gallery, model, image_path, "cosine"))
+    """

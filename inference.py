@@ -194,6 +194,7 @@ def run_inference_image(
     # If an instantiated model is passed, use that one.
     # Otherwise load a checkpoint
     model = restore_model(model, device="cpu") if isinstance(model, str) else model
+    model.eval()
 
     # Yields a tuple (bboxes, confidences)
     # ie. ([[118.15, 93.5875, 498.784, 110.2]], [[98.587]])
