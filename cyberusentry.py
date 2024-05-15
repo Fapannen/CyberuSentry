@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch
 import pickle
 
-from uccs import gallery_distance
+from uccs import gallery_similarity
 
 
 class CyberuSentry(nn.Module):
@@ -44,13 +44,15 @@ class CyberuSentry(nn.Module):
 
     def forward(self, x):
         cer_out = self.cer(x)
-        cer_out = gallery_distance(self.cer_gallery, cer_out, "euclidean", 1.75, 0.4, 4)
+        cer_out = gallery_similarity(
+            self.cer_gallery, cer_out, "euclidean", 1.75, 0.4, 4
+        )
 
         ber_out = self.ber(x)
-        ber_out = gallery_distance(self.ber_gallery, ber_out, "cosine")
+        ber_out = gallery_similarity(self.ber_gallery, ber_out, "cosine")
 
         os_out = self.os(x)
-        os_out = gallery_distance(self.os_gallery, os_out, "cosine")
+        os_out = gallery_similarity(self.os_gallery, os_out, "cosine")
 
         stacked_preds = torch.stack([cer_out, ber_out, os_out])
         final_preds = torch.mean(stacked_preds, dim=0)

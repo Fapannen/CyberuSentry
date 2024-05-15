@@ -167,7 +167,7 @@ def build_uccs_gallery(
     return gallery
 
 
-def gallery_distance(
+def gallery_similarity(
     gallery: dict[int, torch.Tensor], face_embedding: torch.Tensor, dist_fn : str, eucl_dist_thr : float = None, w : float = None, c : float = None
 ) -> torch.Tensor:
     """Take a given 'face_embedding' and match it against embeddings
@@ -324,7 +324,7 @@ if __name__ == "__main__":
     image_embedding = image_embedding[list(image_embedding.keys())[0]]
     gallery_file = open("gallery_model-6-val-54-avg.pkl", "rb")
     gallery = pickle.load(gallery_file)
-    print(torch.argmin(gallery_distance(gallery, image_embedding, "cosine")))
+    print(torch.argmax(gallery_similarity(gallery, image_embedding, "cosine"))) # Will not work, need to provide the model now
     """
     # ------------------------------------------------------------------
     """
