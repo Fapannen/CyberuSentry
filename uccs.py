@@ -356,6 +356,6 @@ if __name__ == "__main__":
     #image_embedding = scores[list(scores.keys())[0]]
     #print(torch.argmax(image_embedding))
 
-    print(uccs_image_inference(kerberos, "0002_1.png"))
+    print(uccs_image_inference(kerberos, "0001_2.png"))
     
     
