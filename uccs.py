@@ -17,6 +17,8 @@ from inference import run_inference_image, get_cropped_faces
 from utils.image import read_image, numpy_to_model_format, model_format_to_numpy
 from utils.model import restore_model
 from utils.bbox import crop_bbox_from_image
+from encoder.eva_tiny import EvaTiny
+from encoder.efficientnet import EfficientNetB0
 
 from dist_fn.distances import CosineDistance, EuclideanDistance
 
@@ -212,7 +214,7 @@ def gallery_distance(
     gallery_embeddings = [gallery[subject] for subject in gallery]
     gallery_embeddings = torch.stack(gallery_embeddings)
 
-    distance_func = EuclideanDistance() if dist_fn == "euclidean" else CosineDistance()
+    distance_func = EuclideanDistance() if dist_fn == "euclidean" else torch.nn.CosineSimilarity()
 
     gallery_dists = torch.tensor([distance_func(subject_embedding,  face_embedding).detach().item() for subject_embedding in gallery_embeddings], requires_grad=False)
     
@@ -224,7 +226,7 @@ def gallery_distance(
     
     return gallery_dists
 
-def uccs_image_inference(gallery, model, image_path, dist_fn : str, eucl_dist_thr : float = 0.2, w : float = 0.4, c : float = 4.0) -> str:
+def uccs_image_inference(cyberusModel, image_path) -> str:
     """Perform an inference on an image and output
     a string representing rows in the submission
     file.
@@ -260,17 +262,13 @@ def uccs_image_inference(gallery, model, image_path, dist_fn : str, eucl_dist_th
     )
 
     faces_mapped = [
-        (i, faces_cropped[i], model(faces_cropped[i]).detach(), image_faces[i], confidences[i])
+        (i, faces_cropped[i], cyberusModel(faces_cropped[i]).detach(), image_faces[i], confidences[i])
         for i in range(len(faces_cropped))
     ]
 
     ret_str = ""
 
-    for _, _, face_embed, face_bbox, detection_score in faces_mapped:
-        if dist_fn == "euclidean":
-            gallery_distances = gallery_distance(gallery, face_embed, dist_fn, eucl_dist_thr=eucl_dist_thr, w=w, c=c)
-        else:
-            gallery_distances = gallery_distance(gallery, face_embed, dist_fn)
+    for _, _, gallery_distances, face_bbox, detection_score in faces_mapped:
 
         xmin, ymin, xmax, ymax = face_bbox
         x1 = xmin
@@ -303,10 +301,11 @@ if __name__ == "__main__":
     
     """
     # ------------------------------------------------------------------
-    #Prepare Gallery
     """
+    #Prepare Gallery
+    
     gallery_path = "C:/data/UCCSChallenge/gallery_images/gallery_images"
-    model = "model-32-val-128.81810501217842"
+    model = "model-6-val-54.003331661224365"
     reduction = "avg"
 
     gallery = build_uccs_gallery(gallery_path, model, reduction)
@@ -316,16 +315,17 @@ if __name__ == "__main__":
     
     """
     # ------------------------------------------------------------------  
+    """
     #Search an identity from an image in UCCS gallery
 
     image_embedding = run_inference_image(
-        "model-32-val-128.81810501217842", "1000_3.png", False
+        "model-6-val-54.003331661224365", "0947_9.png", False
     )
     image_embedding = image_embedding[list(image_embedding.keys())[0]]
-    gallery_file = open("gallery_model-32-val-128-avg.pkl", "rb")
+    gallery_file = open("gallery_model-6-val-54-avg.pkl", "rb")
     gallery = pickle.load(gallery_file)
     print(torch.argmin(gallery_distance(gallery, image_embedding, "cosine")))
-    
+    """
     # ------------------------------------------------------------------
     """
     # UCCS image inference
@@ -336,3 +336,26 @@ if __name__ == "__main__":
     gallery = pickle.load(gallery_file)
     print(uccs_image_inference(gallery, model, image_path, "cosine"))
     """
+    # ------------------------------------------------------------------
+    # CyberuSentry
+    from cyberusentry import CyberuSentry
+    kerberos = CyberuSentry("model-24-val-37.60191621913782",
+                            EvaTiny(activate=False),
+                            "gallery_model-24-val-37-avg.pkl",
+                            "model-32-val-128.81810501217842",
+                            EvaTiny(),
+                            "gallery_model-32-val-128-avg.pkl",
+                            "model-6-val-54.003331661224365",
+                            EfficientNetB0(num_classes=192), "gallery_model-6-val-54-avg.pkl"
+                        )
+        
+    #scores = run_inference_image(
+    #    kerberos, "1000_3.png", False
+    #)
+    #print(scores)
+    #image_embedding = scores[list(scores.keys())[0]]
+    #print(torch.argmax(image_embedding))
+
+    print(uccs_image_inference(kerberos, "0002_1.png"))
+    
+    
