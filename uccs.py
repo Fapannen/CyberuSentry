@@ -318,10 +318,10 @@ def uccs_eval(model : torch.nn.Module, uccs_root : str, path_to_protocol_csv : s
     for subject_col in range(1000):
         df[f"S_{(subject_col + 1):04d}"] = np.nan
     
-    new_df = []
     # Now the evaluation loop. Iterate over images in the folder, find the respective rows in the df
     # and update the values there.
     for partition in partitions:
+        partition_df = []
         partition_path = f"{uccs_root}/{split}_{partition}/{split}_images"
         images = os.listdir(partition_path)
         for image_path in tqdm(images, desc=f"{split} partition {partition}"):
@@ -354,10 +354,10 @@ def uccs_eval(model : torch.nn.Module, uccs_root : str, path_to_protocol_csv : s
                 for i in range(len(model_preds)):
                     nd[f"S_{(i+1):04d}"] = str(model_preds[i].item())[:8]
                 
-                new_df.append(nd)
+                partition_df.append(nd)
     
-    new_df = pd.DataFrame(new_df)             
-    new_df.to_csv(f"{split}_eval.csv", sep=",", header=True, index=False)
+        partition_df = pd.DataFrame(partition_df)             
+        partition_df.to_csv(f"{split}_partition_{partition}_eval.csv", sep=",", header=True, index=False)
 
 
 if __name__ == "__main__":
