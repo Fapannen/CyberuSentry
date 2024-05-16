@@ -355,8 +355,6 @@ def uccs_eval(model : torch.nn.Module, uccs_root : str, path_to_protocol_csv : s
                     nd[f"S_{(i+1):04d}"] = str(model_preds[i].item())[:8]
                 
                 new_df.append(nd)
-            break
-        break
     
     new_df = pd.DataFrame(new_df)             
     new_df.to_csv(f"{split}_eval.csv", sep=",", header=True, index=False)
