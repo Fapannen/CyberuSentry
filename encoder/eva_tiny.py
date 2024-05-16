@@ -3,10 +3,12 @@ import torch.nn as nn
 
 
 class EvaTiny(nn.Module):
-    def __init__(self, num_classes=128, activate=True) -> None:
+    def __init__(
+        self, num_classes=128, activate=True, pretrained: bool = False
+    ) -> None:
         super().__init__()
         self.model = timm.create_model(
-            "eva02_tiny_patch14_224.mim_in22k", pretrained=False
+            "eva02_tiny_patch14_224.mim_in22k", pretrained=pretrained
         )
         self.act = nn.Tanh()
         self.activate = activate

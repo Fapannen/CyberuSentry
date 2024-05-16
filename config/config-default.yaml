@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - encoder: efficientnet-b0
+  - encoder: eva_tiny
   - datasets: default
   - augmentations: default
   - transforms: default
