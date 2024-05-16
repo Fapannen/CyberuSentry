@@ -283,14 +283,76 @@ def uccs_image_inference(cyberusModel, image_path) -> str:
     return ret_str
 
 
+def uccs_eval(model : torch.nn.Module, uccs_root : str, path_to_protocol_csv : str):
+    """Run evaluation on the provided csv file (either val or test).
+    This function should save the required file for the final submission.
+    As such, the "model" parameter is now a fully instantiated nn.Module,
+    which in its forward produces the similarities to UCCS gallery subjects.
+    These outputs are used to produce the final file.
 
-
-
+    Parameters
+    ----------
+    model : torch.nn.Module
+        Instantiated identification model
+    path_to_protocol_csv : str
+        Path to the source csv which should include image path names and their detected bounding boxes.
+    """
+    df = pd.read_csv(path_to_protocol_csv, delimiter=",", header=0)
+    # VAL: FILE,FACE_ID,SUBJECT_ID,FACE_X,FACE_Y,FACE_WIDTH,FACE_HEIGHT
+    # TEST: FILE,DETECTION_SCORE,BB_X,BB_Y,BB_WIDTH,BB_HEIGHT,REYE_X,REYE_Y,LEYE_X,LEYE_Y,NOSE_X,NOSE_Y,RMOUTH_X,RMOUTH_Y,LMOUTH_X,LMOUTH_Y
     
-
+    mode = "val" if "FACE_X" in df.columns else "test"
+    if mode == "val":
+        # Rename columns to the same style as in test, then handle both cases identically
+        df = df.rename(columns={"FACE_X" : "BB_X", "FACE_Y" : "BB_Y", "FACE_WIDTH" : "BB_WIDTH", "FACE_HEIGHT" : "BB_HEIGHT"})
+        df["DETECTION_SCORE"] = 1.0
     
+    partitions = list(range(1, 9)) if mode == "val" else [f"{part:02d}" for part in range(1, 17)]
+    split = "validation" if mode == "val" else "test"
+    
+    # Now that we have potentially unified the dataframes, select only relevant columns
+    # OUTPUT: FILE,DETECTION_SCORE,BB_X,BB_Y,BB_WIDTH,BB_HEIGHT,S_0001, ..., S1000
+    df = df[["FILE", "DETECTION_SCORE", "BB_X", "BB_Y", "BB_WIDTH", "BB_HEIGHT"]]
+    
+    # Create placeholder columns for the subjects S_0001, ..., S_1000
+    for subject_col in range(1000):
+        df[f"S_{(subject_col + 1):04d}"] = np.nan
+        
+    df = df.copy()
+    
+    # Now the evaluation loop. Iterate over images in the folder, find the respective rows in the df
+    # and update the values there.
+    for partition in partitions:
+        partition_path = f"{uccs_root}/{split}_{partition}/{split}_images"
+        images = os.listdir(partition_path)
+        for image_path in tqdm(images, desc=f"{split} partition {partition}"):
+            original_indices = df.index[df['FILE'] == image_path].tolist()
+            img = cv2.cvtColor(cv2.imread(partition_path + "/" + image_path), cv2.COLOR_BGR2RGB)
+            for index in original_indices:
+                face_x, face_y, face_w, face_h = (
+                    df.iloc[index]["BB_X"],
+                    df.iloc[index]["BB_Y"],
+                    df.iloc[index]["BB_WIDTH"],
+                    df.iloc[index]["BB_HEIGHT"],
+                )
 
+                xmin, ymin, xmax, ymax = (
+                    face_x,
+                    face_y,
+                    face_x + face_w,
+                    face_y + face_h,
+                )
 
+                crop = crop_bbox_from_image(img, xmin, xmax, ymin, ymax)
+                model_input = numpy_to_model_format(crop, add_batch_dim=True)
+                model_preds = model(model_input)
+                if len(model_preds.shape) >= 1:
+                    model_preds = model_preds.squeeze()
+                
+                for i in range(len(model_preds)):
+                    df.loc[((df["FILE"] == image_path) & (df["BB_X"] == face_x)), f"S_{(i+1):04d}"] = model_preds[i].item()
+    
+    df.to_csv(f"{split}_eval.csv", sep=",", header=True)
 
 
 if __name__ == "__main__":
@@ -356,6 +418,7 @@ if __name__ == "__main__":
     #image_embedding = scores[list(scores.keys())[0]]
     #print(torch.argmax(image_embedding))
 
-    print(uccs_image_inference(kerberos, "0001_2.png"))
+    #print(uccs_image_inference(kerberos, "0001_2.png"))
     
+    uccs_eval(kerberos, "C:/data/UCCSChallenge", "C:/data/UCCSChallenge/protocols/protocols/validation.csv")
     
