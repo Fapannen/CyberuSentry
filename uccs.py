@@ -348,6 +348,8 @@ def uccs_eval(model : torch.nn.Module, uccs_root : str, path_to_protocol_csv : s
                 model_preds = model(model_input)
                 if len(model_preds.shape) >= 1:
                     model_preds = model_preds.squeeze()
+                    
+                #print("Predicted subject ", torch.argmax(model_preds).item() + 1)
                 
                 for i in range(len(model_preds)):
                     df.loc[((df["FILE"] == image_path) & (df["BB_X"] == face_x)), f"S_{(i+1):04d}"] = model_preds[i].item()
