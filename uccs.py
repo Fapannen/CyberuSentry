@@ -317,9 +317,8 @@ def uccs_eval(model : torch.nn.Module, uccs_root : str, path_to_protocol_csv : s
     # Create placeholder columns for the subjects S_0001, ..., S_1000
     for subject_col in range(1000):
         df[f"S_{(subject_col + 1):04d}"] = np.nan
-        
-    df = df.copy()
     
+    new_df = []
     # Now the evaluation loop. Iterate over images in the folder, find the respective rows in the df
     # and update the values there.
     for partition in partitions:
@@ -351,10 +350,16 @@ def uccs_eval(model : torch.nn.Module, uccs_root : str, path_to_protocol_csv : s
                     
                 #print("Predicted subject ", torch.argmax(model_preds).item() + 1)
                 
+                nd = df.iloc[index].to_dict()
                 for i in range(len(model_preds)):
-                    df.loc[((df["FILE"] == image_path) & (df["BB_X"] == face_x)), f"S_{(i+1):04d}"] = model_preds[i].item()
+                    nd[f"S_{(i+1):04d}"] = str(model_preds[i].item())[:8]
+                
+                new_df.append(nd)
+            break
+        break
     
-    df.to_csv(f"{split}_eval.csv", sep=",", header=True)
+    new_df = pd.DataFrame(new_df)             
+    new_df.to_csv(f"{split}_eval.csv", sep=",", header=True, index=False)
 
 
 if __name__ == "__main__":
