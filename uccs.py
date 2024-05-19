@@ -348,10 +348,11 @@ def uccs_eval(model : torch.nn.Module, uccs_root : str, path_to_protocol_csv : s
                 if len(model_preds.shape) >= 1:
                     model_preds = model_preds.squeeze()
                     
-                print("Predicted subject ", torch.argmax(model_preds).item() + 1, "With score: ", model_preds[torch.argmax(model_preds).item()])
+                #print("Predicted subject ", torch.argmax(model_preds).item() + 1, "With score: ", model_preds[torch.argmax(model_preds).item()])
                 
                 nd = df.iloc[index].to_dict()
                 for i in range(len(model_preds)):
+                    # Sometimes the metric yields (although very close to 0) negative values, clip them to be safe
                     nd[f"S_{(i+1):04d}"] = str(model_preds[i].item())[:8] if model_preds[i].item() >= 0.0 else 0.0
                 
                 partition_df.append(nd)
@@ -425,5 +426,5 @@ if __name__ == "__main__":
 
     #print(uccs_image_inference(kerberos, "0001_2.png"))
     
-    uccs_eval(kerberos, "C:/data/UCCSChallenge", "C:/data/UCCSChallenge/protocols/protocols/validation.csv")
+    uccs_eval(kerberos, "C:/data/UCCSChallenge", "C:/data/UCCSChallenge/protocols/protocols/UCCS-detection-baseline-test.txt")
 
