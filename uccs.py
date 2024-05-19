@@ -222,7 +222,7 @@ def gallery_similarity(
         max_dist = torch.max(gallery_dists).item()
         gallery_dists /= max_dist
         threshold = eucl_dist_thr / max_dist if eucl_dist_thr > 1.0 else eucl_dist_thr
-        gallery_dists = torch.tensor([1 / (1 + score) if score <= threshold else w / (c * score) for score in gallery_dists.numpy()],requires_grad=False)
+        gallery_dists = torch.tensor([max(1 / (1 + score), 0.75) if score <= threshold else w / (c * score) for score in gallery_dists.numpy()],requires_grad=False)
     
     return gallery_dists
 
@@ -348,11 +348,11 @@ def uccs_eval(model : torch.nn.Module, uccs_root : str, path_to_protocol_csv : s
                 if len(model_preds.shape) >= 1:
                     model_preds = model_preds.squeeze()
                     
-                #print("Predicted subject ", torch.argmax(model_preds).item() + 1)
+                print("Predicted subject ", torch.argmax(model_preds).item() + 1, "With score: ", model_preds[torch.argmax(model_preds).item()])
                 
                 nd = df.iloc[index].to_dict()
                 for i in range(len(model_preds)):
-                    nd[f"S_{(i+1):04d}"] = str(model_preds[i].item())[:8]
+                    nd[f"S_{(i+1):04d}"] = str(model_preds[i].item())[:8] if model_preds[i].item() >= 0.0 else 0.0
                 
                 partition_df.append(nd)
     
@@ -372,7 +372,7 @@ if __name__ == "__main__":
     #Prepare Gallery
     
     gallery_path = "C:/data/UCCSChallenge/gallery_images/gallery_images"
-    model = "model-6-val-54.003331661224365"
+    model = "model-24-val-161.36379772424698"
     reduction = "avg"
 
     gallery = build_uccs_gallery(gallery_path, model, reduction)
@@ -412,8 +412,8 @@ if __name__ == "__main__":
                             "model-32-val-128.81810501217842",
                             EvaTiny(),
                             "gallery_model-32-val-128-avg.pkl",
-                            "model-6-val-54.003331661224365",
-                            EfficientNetB0(num_classes=192), "gallery_model-6-val-54-avg.pkl"
+                            "model-24-val-161.36379772424698",
+                            EvaTiny(), "gallery_model-24-val-161-avg.pkl"
                         )
         
     #scores = run_inference_image(
@@ -426,4 +426,4 @@ if __name__ == "__main__":
     #print(uccs_image_inference(kerberos, "0001_2.png"))
     
     uccs_eval(kerberos, "C:/data/UCCSChallenge", "C:/data/UCCSChallenge/protocols/protocols/validation.csv")
-    
+
