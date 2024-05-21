@@ -39,7 +39,7 @@ def prepare_val_identities(path_to_uccs: str | Path, output_dir: str | Path) -> 
         'protocols' folder, containing the metadata csv file with bbox
         annotations.
     output_dir : str | Path
-        Where to store the results. The output_dir will contain 1001 
+        Where to store the results. The output_dir will contain 1001
         directories with samples for each individual identity. For such
         a structure, FaceDataset class is already prepared and easily
         usable.
@@ -168,7 +168,12 @@ def build_uccs_gallery(
 
 
 def gallery_similarity(
-    gallery: dict[int, torch.Tensor], face_embedding: torch.Tensor, dist_fn : str, eucl_dist_thr : float = None, w : float = None, c : float = None
+    gallery: dict[int, torch.Tensor],
+    face_embedding: torch.Tensor,
+    dist_fn: str,
+    eucl_dist_thr: float = None,
+    w: float = None,
+    c: float = None,
 ) -> torch.Tensor:
     """Take a given 'face_embedding' and match it against embeddings
     in a 'gallery'. Return the computed distances of the face_embed
@@ -214,17 +219,32 @@ def gallery_similarity(
     gallery_embeddings = [gallery[subject] for subject in gallery]
     gallery_embeddings = torch.stack(gallery_embeddings)
 
-    distance_func = EuclideanDistance() if dist_fn == "euclidean" else torch.nn.CosineSimilarity()
+    distance_func = (
+        EuclideanDistance() if dist_fn == "euclidean" else torch.nn.CosineSimilarity()
+    )
 
-    gallery_dists = torch.tensor([distance_func(subject_embedding,  face_embedding).detach().item() for subject_embedding in gallery_embeddings], requires_grad=False)
-    
+    gallery_dists = torch.tensor(
+        [
+            distance_func(subject_embedding, face_embedding).detach().item()
+            for subject_embedding in gallery_embeddings
+        ],
+        requires_grad=False,
+    )
+
     if dist_fn == "euclidean":
         max_dist = torch.max(gallery_dists).item()
         gallery_dists /= max_dist
         threshold = eucl_dist_thr / max_dist if eucl_dist_thr > 1.0 else eucl_dist_thr
-        gallery_dists = torch.tensor([max(1 / (1 + score), 0.75) if score <= threshold else w / (c * score) for score in gallery_dists.numpy()],requires_grad=False)
-    
+        gallery_dists = torch.tensor(
+            [
+                max(1 / (1 + score), 0.75) if score <= threshold else w / (c * score)
+                for score in gallery_dists.numpy()
+            ],
+            requires_grad=False,
+        )
+
     return gallery_dists
+
 
 def uccs_image_inference(cyberusModel, image_path) -> str:
     """Perform an inference on an image and output
@@ -262,7 +282,13 @@ def uccs_image_inference(cyberusModel, image_path) -> str:
     )
 
     faces_mapped = [
-        (i, faces_cropped[i], cyberusModel(faces_cropped[i]).detach(), image_faces[i], confidences[i])
+        (
+            i,
+            faces_cropped[i],
+            cyberusModel(faces_cropped[i]).detach(),
+            image_faces[i],
+            confidences[i],
+        )
         for i in range(len(faces_cropped))
     ]
 
@@ -283,7 +309,7 @@ def uccs_image_inference(cyberusModel, image_path) -> str:
     return ret_str
 
 
-def uccs_eval(model : torch.nn.Module, uccs_root : str, path_to_protocol_csv : str):
+def uccs_eval(model: torch.nn.Module, uccs_root: str, path_to_protocol_csv: str):
     """Run evaluation on the provided csv file (either val or test).
     This function should save the required file for the final submission.
     As such, the "model" parameter is now a fully instantiated nn.Module,
@@ -300,24 +326,33 @@ def uccs_eval(model : torch.nn.Module, uccs_root : str, path_to_protocol_csv : s
     df = pd.read_csv(path_to_protocol_csv, delimiter=",", header=0)
     # VAL: FILE,FACE_ID,SUBJECT_ID,FACE_X,FACE_Y,FACE_WIDTH,FACE_HEIGHT
     # TEST: FILE,DETECTION_SCORE,BB_X,BB_Y,BB_WIDTH,BB_HEIGHT,REYE_X,REYE_Y,LEYE_X,LEYE_Y,NOSE_X,NOSE_Y,RMOUTH_X,RMOUTH_Y,LMOUTH_X,LMOUTH_Y
-    
+
     mode = "val" if "FACE_X" in df.columns else "test"
     if mode == "val":
         # Rename columns to the same style as in test, then handle both cases identically
-        df = df.rename(columns={"FACE_X" : "BB_X", "FACE_Y" : "BB_Y", "FACE_WIDTH" : "BB_WIDTH", "FACE_HEIGHT" : "BB_HEIGHT"})
+        df = df.rename(
+            columns={
+                "FACE_X": "BB_X",
+                "FACE_Y": "BB_Y",
+                "FACE_WIDTH": "BB_WIDTH",
+                "FACE_HEIGHT": "BB_HEIGHT",
+            }
+        )
         df["DETECTION_SCORE"] = 1.0
-    
-    partitions = list(range(1, 9)) if mode == "val" else [f"{part:02d}" for part in range(1, 17)]
+
+    partitions = (
+        list(range(1, 9)) if mode == "val" else [f"{part:02d}" for part in range(9, 17)]
+    )
     split = "validation" if mode == "val" else "test"
-    
+
     # Now that we have potentially unified the dataframes, select only relevant columns
     # OUTPUT: FILE,DETECTION_SCORE,BB_X,BB_Y,BB_WIDTH,BB_HEIGHT,S_0001, ..., S1000
     df = df[["FILE", "DETECTION_SCORE", "BB_X", "BB_Y", "BB_WIDTH", "BB_HEIGHT"]]
-    
+
     # Create placeholder columns for the subjects S_0001, ..., S_1000
     for subject_col in range(1000):
         df[f"S_{(subject_col + 1):04d}"] = np.nan
-    
+
     # Now the evaluation loop. Iterate over images in the folder, find the respective rows in the df
     # and update the values there.
     for partition in partitions:
@@ -325,8 +360,10 @@ def uccs_eval(model : torch.nn.Module, uccs_root : str, path_to_protocol_csv : s
         partition_path = f"{uccs_root}/{split}_{partition}/{split}_images"
         images = os.listdir(partition_path)
         for image_path in tqdm(images, desc=f"{split} partition {partition}"):
-            original_indices = df.index[df['FILE'] == image_path].tolist()
-            img = cv2.cvtColor(cv2.imread(partition_path + "/" + image_path), cv2.COLOR_BGR2RGB)
+            original_indices = df.index[df["FILE"] == image_path].tolist()
+            img = cv2.cvtColor(
+                cv2.imread(partition_path + "/" + image_path), cv2.COLOR_BGR2RGB
+            )
             for index in original_indices:
                 face_x, face_y, face_w, face_h = (
                     df.iloc[index]["BB_X"],
@@ -347,21 +384,61 @@ def uccs_eval(model : torch.nn.Module, uccs_root : str, path_to_protocol_csv : s
                 model_preds = model(model_input)
                 if len(model_preds.shape) >= 1:
                     model_preds = model_preds.squeeze()
-                    
-                #print("Predicted subject ", torch.argmax(model_preds).item() + 1, "With score: ", model_preds[torch.argmax(model_preds).item()])
-                
+
+                # print("Predicted subject ", torch.argmax(model_preds).item() + 1, "With score: ", model_preds[torch.argmax(model_preds).item()])
+
                 nd = df.iloc[index].to_dict()
                 for i in range(len(model_preds)):
                     # Sometimes the metric yields (although very close to 0) negative values, clip them to be safe
-                    nd[f"S_{(i+1):04d}"] = str(model_preds[i].item())[:8] if model_preds[i].item() >= 0.0 else 0.0
-                
+                    nd[f"S_{(i+1):04d}"] = (
+                        str(model_preds[i].item())[:8]
+                        if model_preds[i].item() >= 0.0
+                        else 0.0
+                    )
+
                 partition_df.append(nd)
-    
-        partition_df = pd.DataFrame(partition_df)             
-        partition_df.to_csv(f"{split}_partition_{partition}_eval.csv", sep=",", header=True, index=False)
+
+        partition_df = pd.DataFrame(partition_df)
+        partition_df.to_csv(
+            f"{split}_partition_{partition}_eval.csv", sep=",", header=True, index=False
+        )
+
+
+def merge_eval_csv(mode: Literal["val", "test"]):
+    csv_partitions = (
+        list(range(1, 9)) if mode == "val" else [f"{part:02d}" for part in range(1, 17)]
+    )
+    partition = "validation" if mode == "val" else "test"
+    print("Loading the csvs ...")
+    csvs = [
+        pd.read_csv(f"{partition}_partition_{part}_eval.csv", sep=",", header=0)
+        for part in csv_partitions
+    ]
+    print("csvs loaded.")
+
+    final_df = pd.concat(csvs)
+    final_df.to_csv(f"{partition}-final.csv", sep=",", index=False, header=True)
+
+
+def square_df(csv_final_path: str):
+    df = pd.read_csv(csv_final_path, sep=",", header=0)
+
+    for col in tqdm(df.columns, desc="Squaring subject columns"):
+        if str(col).startswith("S_"):
+            df[col] = df[col].apply(lambda x: f"{(x**2):5f}")
+
+    df.to_csv(
+        csv_final_path.replace(".csv", "-squared.csv"),
+        sep=",",
+        index=False,
+        header=True,
+    )
 
 
 if __name__ == "__main__":
+    merge_eval_csv("test")
+    square_df("test-final.csv")
+    exit(1)
     # ------------------------------------------------------------------
     """ Prepare dataset with cropped faces
     
@@ -382,7 +459,7 @@ if __name__ == "__main__":
         pickle.dump(gallery, f)
     
     """
-    # ------------------------------------------------------------------  
+    # ------------------------------------------------------------------
     """
     #Search an identity from an image in UCCS gallery
 
@@ -407,24 +484,21 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # CyberuSentry
     from cyberusentry import CyberuSentry
-    kerberos = CyberuSentry("model-24-val-37.60191621913782",
-                            EvaTiny(activate=False),
-                            "gallery_model-24-val-37-avg.pkl",
-                            "model-32-val-128.81810501217842",
-                            EvaTiny(),
-                            "gallery_model-32-val-128-avg.pkl",
-                            "model-24-val-161.36379772424698",
-                            EvaTiny(), "gallery_model-24-val-161-avg.pkl"
-                        )
-        
-    #scores = run_inference_image(
-    #    kerberos, "1000_3.png", False
-    #)
-    #print(scores)
-    #image_embedding = scores[list(scores.keys())[0]]
-    #print(torch.argmax(image_embedding))
 
-    #print(uccs_image_inference(kerberos, "0001_2.png"))
-    
-    uccs_eval(kerberos, "C:/data/UCCSChallenge", "C:/data/UCCSChallenge/protocols/protocols/UCCS-detection-baseline-test.txt")
+    kerberos = CyberuSentry(
+        "model-24-val-37.60191621913782",
+        EvaTiny(activate=False),
+        "gallery_model-24-val-37-avg.pkl",
+        "model-32-val-128.81810501217842",
+        EvaTiny(),
+        "gallery_model-32-val-128-avg.pkl",
+        "model-24-val-161.36379772424698",
+        EvaTiny(),
+        "gallery_model-24-val-161-avg.pkl",
+    )
 
+    uccs_eval(
+        kerberos,
+        "C:/data/UCCSChallenge",
+        "C:/data/UCCSChallenge/protocols/protocols/UCCS-detection-baseline-test.txt",
+    )
