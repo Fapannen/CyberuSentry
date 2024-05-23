@@ -343,7 +343,7 @@ def uccs_eval(model: torch.nn.Module, uccs_root: str, path_to_protocol_csv: str)
         df["DETECTION_SCORE"] = 1.0
 
     partitions = (
-        list(range(1, 9)) if mode == "val" else [f"{part:02d}" for part in range(9, 17)]
+        list(range(1, 9)) if mode == "val" else [f"{part:02d}" for part in range(1, 17)]
     )
     split = "validation" if mode == "val" else "test"
 
