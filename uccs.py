@@ -391,21 +391,22 @@ def uccs_eval(model: torch.nn.Module, uccs_root: str, path_to_protocol_csv: str)
 
                 nd = df.iloc[index].to_dict()
                 for i in range(len(model_preds)):
-                    # Sometimes the metric yields (although very close to 0) negative values, clip them to be safe TBD rewrite
+                    # clip them to be safe TBD rewrite
                     pred = model_preds[i].item()
-                    
-                    if pred <= 0.0:
-                        pred = 0.0
-                    if pred >= 1.0:
-                        pred = 1.0
                         
                     nd[f"S_{(i+1):04d}"] = (
-                        str(pred)[:8]
+                        pred
                     )
 
                 partition_df.append(nd)
 
         partition_df = pd.DataFrame(partition_df)
+        
+        for col in partition_df.columns:
+            if str(col).startswith("S_"):
+                df[col].clip(lower=0.0, upper=1.0, inplace=True)
+                df[col] = df[col].apply(lambda x : str(x)[:8])
+                
         partition_df.to_csv(
             f"{split}_partition_{partition}_eval.csv", sep=",", header=True, index=False
         )
