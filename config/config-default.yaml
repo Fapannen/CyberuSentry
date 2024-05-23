@@ -6,7 +6,7 @@ defaults:
   - transforms: default
   - loss: triplet
   - dist_fn: euclidean
-  - optimizer: adamw
+  - optimizer: sgd
 
 batch_size: 32
 epochs: 100

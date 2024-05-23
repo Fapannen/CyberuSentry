@@ -19,6 +19,7 @@ from utils.model import restore_model
 from utils.bbox import crop_bbox_from_image
 from encoder.eva_tiny import EvaTiny
 from encoder.efficientnet import EfficientNetB0
+from encoder.mobilenet import MobileNetV2
 
 from dist_fn.distances import CosineDistance, EuclideanDistance
 
@@ -436,9 +437,9 @@ def square_df(csv_final_path: str):
 
 
 if __name__ == "__main__":
-    merge_eval_csv("test")
-    square_df("test-final.csv")
-    exit(1)
+    #merge_eval_csv("test")
+    #square_df("test-final.csv")
+    #exit(1)
     # ------------------------------------------------------------------
     """ Prepare dataset with cropped faces
     
@@ -450,15 +451,16 @@ if __name__ == "__main__":
     #Prepare Gallery
     
     gallery_path = "C:/data/UCCSChallenge/gallery_images/gallery_images"
-    model = "model-24-val-161.36379772424698"
+    model = "model-6-val-0.0"
     reduction = "avg"
 
     gallery = build_uccs_gallery(gallery_path, model, reduction)
 
     with open(f"gallery_{model.split(".")[0]}-{reduction}.pkl", "wb") as f:
         pickle.dump(gallery, f)
-    
+    exit(1)
     """
+
     # ------------------------------------------------------------------
     """
     #Search an identity from an image in UCCS gallery
@@ -486,15 +488,21 @@ if __name__ == "__main__":
     from cyberusentry import CyberuSentry
 
     kerberos = CyberuSentry(
-        "model-24-val-37.60191621913782",
-        EvaTiny(activate=False),
-        "gallery_model-24-val-37-avg.pkl",
+        "model-6-val-0.0",
+        MobileNetV2(num_classes=192),
+        "gallery_model-6-val-0-avg.pkl",
         "model-32-val-128.81810501217842",
         EvaTiny(),
         "gallery_model-32-val-128-avg.pkl",
         "model-24-val-161.36379772424698",
         EvaTiny(),
         "gallery_model-24-val-161-avg.pkl",
+    )
+    
+    uccs_eval(
+        kerberos,
+        "C:/data/UCCSChallenge",
+        "C:/data/UCCSChallenge/protocols/protocols/validation.csv",
     )
 
     uccs_eval(
