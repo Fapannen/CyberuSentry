@@ -400,9 +400,7 @@ def uccs_eval(model: torch.nn.Module, uccs_root: str, path_to_protocol_csv: str)
                         pred = 1.0
                         
                     nd[f"S_{(i+1):04d}"] = (
-                        str(model_preds[i].item())[:8]
-                        if model_preds[i].item() >= 0.0
-                        else 0.0
+                        str(pred)[:8]
                     )
 
                 partition_df.append(nd)
