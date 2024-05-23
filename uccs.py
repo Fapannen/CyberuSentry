@@ -404,7 +404,7 @@ def uccs_eval(model: torch.nn.Module, uccs_root: str, path_to_protocol_csv: str)
         
         for col in partition_df.columns:
             if str(col).startswith("S_"):
-                df[col].clip(lower=0.0, upper=1.0, inplace=True)
+                df[col] = df[col].clip(lower=0.0, upper=1.0)
                 df[col] = df[col].apply(lambda x : str(x)[:8])
                 
         partition_df.to_csv(
