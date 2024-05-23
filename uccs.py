@@ -238,11 +238,12 @@ def gallery_similarity(
         threshold = eucl_dist_thr / max_dist if eucl_dist_thr > 1.0 else eucl_dist_thr
         gallery_dists = torch.tensor(
             [
-                max(1 / (1 + score), 0.75) if score <= threshold else w / (c * score)
+                max(1 / (1 + score), 0.75) if score <= threshold else max(w - score, 0.0)
                 for score in gallery_dists.numpy()
             ],
             requires_grad=False,
         )
+        assert torch.min(gallery_dists) >= 0.0 and torch.max(gallery_dists) <= 1.0
 
     return gallery_dists
 
@@ -488,9 +489,9 @@ if __name__ == "__main__":
     from cyberusentry import CyberuSentry
 
     kerberos = CyberuSentry(
-        "model-6-val-0.0",
-        MobileNetV2(num_classes=192),
-        "gallery_model-6-val-0-avg.pkl",
+        "model-24-val-37.60191621913782",
+        EvaTiny(activate=False),
+        "gallery_model-24-val-37-avg.pkl",
         "model-32-val-128.81810501217842",
         EvaTiny(),
         "gallery_model-32-val-128-avg.pkl",
@@ -510,3 +511,8 @@ if __name__ == "__main__":
         "C:/data/UCCSChallenge",
         "C:/data/UCCSChallenge/protocols/protocols/UCCS-detection-baseline-test.txt",
     )
+    
+    merge_eval_csv("val")
+    merge_eval_csv("test")
+    square_df("validation-final.csv")
+    square_df("test-final.csv")
