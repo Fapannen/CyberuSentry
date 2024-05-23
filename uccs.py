@@ -243,8 +243,13 @@ def gallery_similarity(
             ],
             requires_grad=False,
         )
-        assert torch.min(gallery_dists) >= 0.0 and torch.max(gallery_dists) <= 1.0
+    
+    if dist_fn == "cosine":
+        gallery_dists = (gallery_dists + 1.0) / 2
+        
+    assert torch.min(gallery_dists) >= 0.0 and torch.max(gallery_dists) <= 1.0
 
+    # It is actually gallery similarity, not dist
     return gallery_dists
 
 
@@ -387,26 +392,19 @@ def uccs_eval(model: torch.nn.Module, uccs_root: str, path_to_protocol_csv: str)
                 if len(model_preds.shape) >= 1:
                     model_preds = model_preds.squeeze()
 
-                # print("Predicted subject ", torch.argmax(model_preds).item() + 1, "With score: ", model_preds[torch.argmax(model_preds).item()])
+                #print("Predicted subject ", torch.argmax(model_preds).item() + 1, "With score: ", model_preds[torch.argmax(model_preds).item()])
 
                 nd = df.iloc[index].to_dict()
                 for i in range(len(model_preds)):
-                    # clip them to be safe TBD rewrite
-                    pred = model_preds[i].item()
+                    # Sometimes the metric yields (although very close to 0) negative values, clip them to be safe TBD rewrite
                         
                     nd[f"S_{(i+1):04d}"] = (
-                        pred
+                        str(model_preds[i].item())[:8]
                     )
 
                 partition_df.append(nd)
 
         partition_df = pd.DataFrame(partition_df)
-        
-        for col in partition_df.columns:
-            if str(col).startswith("S_"):
-                df[col] = df[col].clip(lower=0.0, upper=1.0)
-                df[col] = df[col].apply(lambda x : str(x)[:8])
-                
         partition_df.to_csv(
             f"{split}_partition_{partition}_eval.csv", sep=",", header=True, index=False
         )
