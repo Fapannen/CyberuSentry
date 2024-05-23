@@ -391,7 +391,14 @@ def uccs_eval(model: torch.nn.Module, uccs_root: str, path_to_protocol_csv: str)
 
                 nd = df.iloc[index].to_dict()
                 for i in range(len(model_preds)):
-                    # Sometimes the metric yields (although very close to 0) negative values, clip them to be safe
+                    # Sometimes the metric yields (although very close to 0) negative values, clip them to be safe TBD rewrite
+                    pred = model_preds[i].item()
+                    
+                    if pred <= 0.0:
+                        pred = 0.0
+                    if pred >= 1.0:
+                        pred = 1.0
+                        
                     nd[f"S_{(i+1):04d}"] = (
                         str(model_preds[i].item())[:8]
                         if model_preds[i].item() >= 0.0
