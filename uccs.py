@@ -441,6 +441,21 @@ def square_df(csv_final_path: str):
     )
 
 
+def shift_values(csv_path : str, direction="left"):
+    df = pd.read_csv(csv_path, sep=",", header=0)
+
+    for col in tqdm(df.columns, desc=f"Shifting subject columns to the {direction}"):
+        if str(col).startswith("S_"):
+            df[col] = df[col].apply(lambda x: f"{((x * 2) - 1):5f}" if direction == "left" else  f"{((x + 1) / 2):5f}")
+
+    df.to_csv(
+        csv_path.replace(".csv", "-shifted.csv"),
+        sep=",",
+        index=False,
+        header=True,
+    )
+
+
 if __name__ == "__main__":
     #merge_eval_csv("test")
     #square_df("test-final.csv")
@@ -520,3 +535,8 @@ if __name__ == "__main__":
     merge_eval_csv("test")
     square_df("validation-final.csv")
     square_df("test-final.csv")
+    
+    shift_values("test-final.csv")
+    shift_values("test-final-squared.csv")
+    shift_values("validation-final.csv")
+    shift_values("validation-final-squared.csv")
