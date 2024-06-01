@@ -5,40 +5,33 @@ from pathlib import Path
 
 
 def read_image(
-    path, convert_to_tensor: bool = True, scale: bool = True
-) -> np.ndarray | torch.Tensor:
+    path: str, scale: bool = True
+) -> np.ndarray:
     """Reads an image, converts it to RGB and optionally converts it to
     torch.Tensor or scales the values into [0, 1].
 
-    This function does not do any resizing or input transformations,
-    nor augmentations. These shall be handled elsewhere.
+    This function does not do any resizing or input transformations
+    (except scaling the values, if set) nor augmentations etc.
+    These shall be handled elsewhere.
 
         Parameters
         ----------
         path : str | Path
                 Full path to the image to be read.
-        convert_to_tensor : bool, optional
-                Convert the image to PyTorch tensor
-                (Including the HWC -> CHW conversion)
         scale : bool, optional
                 Scale the values into [0, 1] range
 
-
         Returns
         -------
-        np.ndarray | torch.Tensor
-                Opened image either as a
+        np.ndarray
+                Opened image as a
                 {np.ndarray, RGB, HWC}
-                or
-                {torch.Tensor, RGB, CHW}
     """
     image = cv2.imread(path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
     if scale:
         image = image / 255.0
-
-    image = numpy_to_model_format(image) if convert_to_tensor else image
 
     return image
 
@@ -64,13 +57,15 @@ def numpy_to_model_format(
             size of the model format input image. Can be
             either a single integer or a tuple.
     add_batch_dim : bool, optional
-            _description_, by default False
+            Whether to produce a BCHW tensor or just a CHW.
+            By default False -> CHW
     
     Returns
     -------
     torch.Tensor
-            processed image in Tensor format, ready to
-            be consumed by the model.
+            Processed image in Tensor format. If batch dim
+            is added, the output should be directly
+            consumable by the model.
     """
     input_size = (target_size, target_size) if isinstance(target_size, int) else target_size
 

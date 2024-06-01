@@ -185,7 +185,7 @@ def run_inference_image(
 
     image_name = Path(image_path).stem
 
-    image: np.ndarray = read_image(image_path, convert_to_tensor=False, scale=False)
+    image: np.ndarray = read_image(image_path, scale=False)
 
     # If an instantiated model is passed, use that one.
     # Otherwise use a default MTCNN detector

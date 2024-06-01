@@ -64,7 +64,7 @@ def crop_images_in_folder(src_path: str, dst_path: str, type: Literal["v1", "v2"
     if type == "v1":
         for image_path in tqdm(os.listdir(path_to_dataset)):
             image_path_full = path_to_dataset + "/" + image_path
-            image = read_image(image_path_full, convert_to_tensor=False, scale=False)
+            image = read_image(image_path_full, scale=False)
             img_face = fp_model.detect(image)
             if img_face[0] is None:
                 print(f"Image {image_path} has no face detected, saving as is ...")

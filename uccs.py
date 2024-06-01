@@ -59,7 +59,8 @@ def prepare_val_identities(path_to_uccs: str | Path, output_dir: str | Path) -> 
 
             img_df = df.loc[df["FILE"] == image_path]
 
-            # No need to use 'read_image' as nothing is being detected
+            # No need to use 'read_image' as nothing is being detected and
+            # conversion from BGR to RGB is not necessary.
             img = cv2.imread(
                 f"{uccs_root}/validation_{partition}/validation_images/{image_path}"
             )
@@ -273,7 +274,7 @@ def uccs_image_inference(cyberusModel, image_path) -> str:
     dist_fn
         Which distance function to use when computing gallery similarity
     """
-    image = read_image(image_path, convert_to_tensor=False, scale=False)
+    image = read_image(image_path, scale=False)
 
     # Init same settings as UCCS baseline detector
     face_detector = fp.MTCNN(thresholds=[0.2, 0.2, 0.2])

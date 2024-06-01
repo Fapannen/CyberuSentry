@@ -6,7 +6,7 @@ from abc import abstractmethod
 
 from typing import Literal
 from torch.utils.data import Dataset
-from utils.image import read_image
+from utils.image import read_image, numpy_to_model_format
 
 
 class FaceDataset(Dataset):
@@ -154,8 +154,8 @@ class FaceDataset(Dataset):
         # Get another identity
         neg_img, neg_identity = self.get_different_identity(origin_identity)
 
-        pos_img = read_image(pos_img)
-        neg_img = read_image(neg_img)
+        pos_img = numpy_to_model_format(read_image(pos_img))
+        neg_img = numpy_to_model_format(read_image(neg_img))
 
         if self.split == "train":
             pos_img = self.augs(pos_img)
