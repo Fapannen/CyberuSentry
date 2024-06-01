@@ -10,10 +10,9 @@ def build_triplets(
     triplet_setting=Literal["semi-hard", "hard", "batch-hard"],
     margin: float = 0.2,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    """Build triplets
-    in pos_embs. It is expected that pos_embs
-    contains at least cfg.min_samples_per_id
-    samples per identity for optimal learning.
+    """Build triplets in pos_embs. It is expected that pos_embs
+    contains at least 'min_samples_per_id' samples per identity
+    for learning.
 
     Parameters
     ----------
@@ -23,7 +22,7 @@ def build_triplets(
         in the batch, and that the batch does not need
         to contain just a single identity.
 
-        shape [B, embed_dim]
+        shape: [B, embed_dim]
 
     neg_embs : torch.Tensor
         Embeddings of the negative samples. Keep in mind
@@ -31,11 +30,11 @@ def build_triplets(
         the identity within the sample! As in the negative
         for index i might not be negative at all for index j.
 
-        shape [B, embed_dim]
+        shape: [B, embed_dim]
 
     min_samples_per_id : int
         Number of minimal samples per identity that
-        are to be present within a batch.
+        are expected to be present within a batch.
 
     dist_fn : Callable
         A callable accepting two tensors and returning the
@@ -52,8 +51,10 @@ def build_triplets(
                       &&
                       d(a, p) < d(a, n)
 
+                      where 'd' is the distance function
+
         - hard:       For each anchor-positive pair, select
-                      the hardest negative, ie the negative
+                      the hardest negative, ie. the negative
                       sample which is the closest to the
                       anchor
 
@@ -71,7 +72,8 @@ def build_triplets(
     List[torch.Tensor, torch.Tensor, torch.Tensor]
         shape [3, <computed_samples>, embed_dim]
 
-        The number of computed samples may vary.
+        The number of computed samples may vary
+        in the semi-hard training phase.
     """
 
     # batch-hard requires a little different logic
@@ -80,7 +82,7 @@ def build_triplets(
 
     triplets = []
 
-    # Length of one cycle. The number of samples
+    # Length of one cycle = The number of samples
     # before the same identity is reached again
     cycle_length = len(pos_embs) // min_samples_per_id
 
@@ -103,7 +105,7 @@ def build_triplets(
                 indices_satisfies_semihard = []
 
                 for k in other_positives_indices:
-                    # If the positive and negative are ordered correcly (pos is closer than neg)
+                    # If the positive and negative are ordered correcly (pos is closer to anchor than neg)
                     # AND
                     # the difference of distances (pos1, pos2) and (pos1, neg) lies in the margin
                     # THEN

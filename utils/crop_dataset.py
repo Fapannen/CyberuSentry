@@ -12,7 +12,7 @@ from utils.image import read_image
 from inference import get_cropped_faces
 
 
-def crop_images_in_folder(src_path: str, dst_path: str, type: Literal["v1", "v1"]):
+def crop_images_in_folder(src_path: str, dst_path: str, type: Literal["v1", "v2"]):
     """Crop the provided dataset so that the images contain just the face
     and a little of surroundings, but not as much as the original images.
     This should enable the model to focus more on the faces rather than
@@ -106,7 +106,9 @@ if __name__ == "__main__":
         "--type",
         action="store",
         dest="type",
-        help="Which version of crop_dataset to use. V1 assumes the directory contains only images, V2 assumes the directory contains identity directories",
+        help="""Which version of crop_dataset to use. V1 assumes the directory
+                 contains only images, V2 assumes the directory contains
+                 identity directories""",
     )
     args = parser.parse_args()
 

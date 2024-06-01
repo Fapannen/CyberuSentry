@@ -10,8 +10,8 @@ def read_image(
     """Reads an image, converts it to RGB and optionally converts it to
     torch.Tensor or scales the values into [0, 1].
 
-    Note that this function does not do any resizing or input transformations,
-    nor augmentations. These shall be handled later in the code.
+    This function does not do any resizing or input transformations,
+    nor augmentations. These shall be handled elsewhere.
 
         Parameters
         ----------
@@ -44,7 +44,7 @@ def read_image(
 
 
 def numpy_to_model_format(
-    image: np.ndarray, add_batch_dim: bool = False
+    image: np.ndarray, target_size: int | tuple[int, int] = 224, add_batch_dim: bool = False, 
 ) -> torch.Tensor:
     """Convert a numpy image to a torch Tensor.
             Includes:
@@ -60,16 +60,19 @@ def numpy_to_model_format(
     image : np.ndarray
             Image as a numpy array. Expects to already be
             in BGR and HWC format.
+    input_size :
+            size of the model format input image. Can be
+            either a single integer or a tuple.
     add_batch_dim : bool, optional
             _description_, by default False
-
+    
     Returns
     -------
     torch.Tensor
             processed image in Tensor format, ready to
             be consumed by the model.
     """
-    input_size = (224, 224)
+    input_size = (target_size, target_size) if isinstance(target_size, int) else target_size
 
     image = cv2.resize(image, input_size)
 
@@ -86,7 +89,8 @@ def numpy_to_model_format(
 
 
 def model_format_to_numpy(image: torch.Tensor) -> np.ndarray:
-    """Convert Tensor represented image to numpy representation
+    """Convert Tensor represented image to numpy representation.
+    Ditch the batch dimension, change from CHW to HWC.
 
     Parameters
     ----------
@@ -107,7 +111,19 @@ def model_format_to_numpy(image: torch.Tensor) -> np.ndarray:
     return image
 
 
-def debug_samples_batch(batch: torch.Tensor, output_dir: str = "./debug") -> None:
+def save_batch_samples(batch: torch.Tensor, output_dir: str = "./debug") -> None:
+    """Save a batch of images during training for
+    manual examination if everything is working
+    properly.
+
+    Parameters
+    ----------
+    batch : torch.Tensor
+        One batch of data, expected shape is BCHW
+    output_dir : str, optional
+        Path to a directory where the images shall be saved.
+        By default "./debug"
+    """
     out_path = Path(output_dir).resolve()
     out_path.mkdir(exist_ok=True, parents=True)
 
