@@ -14,16 +14,49 @@ from dist_fn.distances import EuclideanDistance, CosineDistance
 
 
 def run_inference_video(
-    model_path, video_path, dist_fn, each_nth_frame=30, unique_dist_threshold=0.5
-):
+    model_path : str, video_path : str, dist_fn :str, each_nth_frame : int = 30, unique_dist_threshold : float = 0.5,
+    config_name: str = "config-default"
+) -> None:
+    """This function analyzes the provided video file 
+    using a provided model. This function creates a
+    directory where all detected faces will be assigned
+    to an identity. Identities are built on-the-go.
+    New identity is determined based on 
+    'unique_dist_threshold' where all faces that have
+    its embedding distance greater than 'unique_dist_threshold'
+    from all already established identities are assigned
+    to a new identity. As a user, you can control how sensitive
+    this boundary is. To speed things up and not infer the
+    whole video file, only 'each_nth_frame' is analyzed.
+
+    Parameters
+    ----------
+    model_path : str
+        Path to a model checkpoint
+    video_path : str
+        Path to the video to be analyzed
+    dist_fn : str
+        "euclidean" or "cosine"
+    each_nth_frame : int, optional
+        Analyze each n-th frame in the video, by default 30,
+        which should mean that each video is analyzed once
+        per second as most videos are usually taken either
+        in 24 or 30 FPS
+    unique_dist_threshold : float, optional
+        Threshold which determines a matching or non-matching
+        identity. By default 0.5, but should be handled manually,
+        cosine-based models will usually have this smaller.
+    config_name
+        Name of the config to instantiate the model from.
+    """
     video = cv2.VideoCapture(video_path)
     video_at = 0
 
     # Init the face detector
     fp_model = fp.MTCNN()
 
-    # Init the face encoder
-    model = restore_model(model_path, device="cpu").eval()
+    # Init the face encoder / identificator
+    model = restore_model(model_path, device="cpu", config_name=config_name).eval()
 
     # List of unique faces
     # {int: [face1, face2]}
@@ -31,7 +64,6 @@ def run_inference_video(
 
     # Create an output directory where identities will be shown
     video_output_dir_path = Path(f"video_inference_output/{Path(video_path).stem}")
-    # .absolute() Issues on windows :)))
     video_output_dir_path.mkdir(exist_ok=True, parents=True)
 
     distance_func = EuclideanDistance() if dist_fn == "euclidean" else CosineDistance()
@@ -42,8 +74,6 @@ def run_inference_video(
         if ret:
             # inference image
             image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-            cv2.imwrite("frame.jpg", frame)
 
             image_faces = fp_model.detect(image)
 
@@ -119,7 +149,9 @@ def get_cropped_faces(
     Parameters
     ----------
     detected_faces : tuple [bboxes, confidences]
-        _description_
+        Output from a MTCNN model or other detector.
+        If other detector is used, make sure it has
+        the same structure.
     image : np.ndarray
         The original image from which to cut faces
 
@@ -146,12 +178,13 @@ def run_inference_image(
     image_path: str,
     save_face: bool = True,
     face_detector: torch.nn.Module | None = None,
+    config_name: str = "config-default"
 ) -> dict[str, np.ndarray] | None:
     """Function for a complete embedding extraction from an image.
     Includes loading the model, loading the image, detecting faces,
     cropping faces, embedding the faces and returning the produced
     embeddings. The ouput is in a form of a dictionary of structure
-    {image_path_face_idx: embedding}
+    {image_path_face_idx_X: embedding}
 
     Parameters
     ----------
@@ -165,24 +198,26 @@ def run_inference_image(
         Path to the image to be inferred
     save_face : bool, optional
         Whether to save the cropped and inferred face into
-        'inference_output' directory. Useful when running testing
+        'inference_output' directory. Useful when running manual
         inference, but we dont want to save anything during ie.
-        gallery building.
+        gallery building or evaluation.
     face_detector : torch.nn.Module | None, optional
         Model which is used to detect the faces in the image.
         Similarily to 'model', if it is an already instantiated
         Module, it is used as is, otherwise a default MTCNN
         detector is used.
+    config_name
+        Name of the config to instantiate the model from
 
     Returns
     -------
     dict[str, np.ndarray] | None
-        Mapping of {face_idx : face_embedding}. Face index consists
-        of the image name and the index of the face within that
-        specific image, so it is enough to distinguish different
-        faces from different images and also within a single image.
+        Mapping of {image_path_face_idx_X : face_embedding}.
+        Each key consists of the image name and the index of the
+        face within that specific image, so it is enough to
+        distinguish different faces from different images and
+        also within just a single image.
     """
-
     image_name = Path(image_path).stem
 
     image: np.ndarray = read_image(image_path, scale=False)
@@ -193,7 +228,7 @@ def run_inference_image(
 
     # If an instantiated model is passed, use that one.
     # Otherwise load a checkpoint
-    model = restore_model(model, device="cpu") if isinstance(model, str) else model
+    model = restore_model(model, device="cpu", config_name=config_name) if isinstance(model, str) else model
     model.eval()
 
     # Yields a tuple (bboxes, confidences)
@@ -212,16 +247,16 @@ def run_inference_image(
         map(lambda x: numpy_to_model_format(x, add_batch_dim=True), faces_cropped)
     )
 
+    # Pass the cropped faces through the identification model
     faces_mapped = [
         (i, faces_cropped[i], model(faces_cropped[i]).detach())
         for i in range(len(faces_cropped))
     ]
 
     # During inference on multiple images, we want to save the faces
-    # to manually inspect the results, however, when ie building
-    # gallery, we dont need the image saved.
+    # to manually inspect the results.
     if save_face:
-        for face_i, face_cropped, face_embedding in faces_mapped:
+        for face_i, face_cropped, _ in faces_mapped:
             face_image_numpy = model_format_to_numpy(face_cropped)
 
             Path("inference_output").mkdir(exist_ok=True, parents=True)
@@ -236,7 +271,7 @@ def run_inference_image(
     }
 
 
-def run_inference_images(model_path: str, img1: str, img2: str, dist_fn: str):
+def run_inference_images(model_path: str, img1: str, img2: str, dist_fn: str, config_name: str = "config-default") -> None:
     """Run inference on two images and print out differences
     between individual faces in both images.
 
@@ -250,11 +285,13 @@ def run_inference_images(model_path: str, img1: str, img2: str, dist_fn: str):
         Path to the second image
     dist_fn: str
         "euclidean" or "cosine"
+    config_name
+        Name of the config to instantiate the model from
     """
 
     distance_func = EuclideanDistance() if dist_fn == "euclidean" else CosineDistance()
 
-    model = restore_model(model_path, device="cpu")
+    model = restore_model(model_path, device="cpu", config_name=config_name)
 
     img1_faces_dict = run_inference_image(model, img1, save_face=True)
     img2_faces_dict = run_inference_image(model, img2, save_face=True)
@@ -313,6 +350,14 @@ if __name__ == "__main__":
         default=30,
         type=int,
     )
+    parser.add_argument(
+        "-c",
+        "--cfg",
+        action="store",
+        dest="config_name",
+        default="config-default",
+        type=str,
+    )
     args = parser.parse_args()
 
     if args.video_path is None and args.img1 is None:
@@ -325,10 +370,11 @@ if __name__ == "__main__":
             args.dist_fn,
             each_nth_frame=args.frames_to_skip,
             unique_dist_threshold=args.threshold,
+            config_name=args.config_name
         )
 
     elif args.img1 is not None and args.img2 is not None:
-        run_inference_images(args.model_path, args.img1, args.img2, args.dist_fn)
+        run_inference_images(args.model_path, args.img1, args.img2, args.dist_fn, args.config_name)
 
     else:
         print("Unrecognized combination of arguments, exitting ...")
