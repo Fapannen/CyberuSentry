@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch
 import pickle
 
-from uccs import gallery_similarity
+from utils.gallery import gallery_similarity
 
 
 class CyberuSentry(nn.Module):
@@ -49,7 +49,7 @@ class CyberuSentry(nn.Module):
         with torch.no_grad():
             cer_out = self.cer(x)
             cer_out = gallery_similarity(
-                self.cer_gallery, cer_out, "euclidean", 1.75, 0.4, 4
+                self.cer_gallery, cer_out, "euclidean", 1.75, 0.4
             )
 
             ber_out = self.ber(x)
