@@ -17,6 +17,7 @@ from inference import run_inference_image, get_cropped_faces
 from utils.image import read_image, numpy_to_model_format, model_format_to_numpy
 from utils.model import restore_model
 from utils.bbox import crop_bbox_from_image
+from utils.gallery import gallery_similarity
 from encoder.eva_tiny import EvaTiny
 from encoder.efficientnet import EfficientNetB0
 from encoder.mobilenet import MobileNetV2
@@ -59,7 +60,8 @@ def prepare_val_identities(path_to_uccs: str | Path, output_dir: str | Path) -> 
 
             img_df = df.loc[df["FILE"] == image_path]
 
-            # No need to use 'read_image' as nothing is being detected
+            # No need to use 'read_image' as nothing is being detected and
+            # conversion from BGR to RGB is not necessary.
             img = cv2.imread(
                 f"{uccs_root}/validation_{partition}/validation_images/{image_path}"
             )
@@ -168,112 +170,28 @@ def build_uccs_gallery(
     return gallery
 
 
-def gallery_similarity(
-    gallery: dict[int, torch.Tensor],
-    face_embedding: torch.Tensor,
-    dist_fn: str,
-    eucl_dist_thr: float = None,
-    w: float = None,
-    c: float = None,
-) -> torch.Tensor:
-    """Take a given 'face_embedding' and match it against embeddings
-    in a 'gallery'. Return the computed distances of the face_embed
-    compared to all subjects in the gallery.
-
-    In case of euclidean distance as the distance function, the
-    distances are first max-normalized into [0, 1] range and then
-    the "matching" subjects are selected depending on a threshold.
-    Subjects with distance lower than threshold are considered matching,
-    subjects with distance larger than threshold are considered non-matching.
-
-    Output from this function is a torch.Tensor containing the distances
-    of the provided face embed to all face embeddings in the gallery and
-    the values are in the [0, 1] range.
-
-    Parameters
-    ----------
-    gallery : dict[int, torch.Tensor]
-        A dictionary of identities. For each identity in the gallery, there
-        is the identity's embedding stored, which is compared to the provided
-        face embedding.
-    face_embedding : torch.Tensor
-        The embedding from an inferred image. This is the vector that represents
-        the face from whatever image to be matched against known identities in the
-        gallery.
-    dist_fn
-        Method of computing the distance between face embeddings. Can be either
-        "cosine" or "euclidean".
-    eucl_dist_thr
-        Used in the case of euclidean distance function. Determines the threshold
-        under which the distances are considered matching
-    w
-        Controls the value at which the non-matching samples scores start
-    c
-        Controls the scale of the diminishing of scores in the case of non-matching
-        samples
-
-    Returns
-    -------
-    torch.Tensor
-        Tensor of distances of the embedding to all subjects in the gallery
-    """
-    gallery_embeddings = [gallery[subject] for subject in gallery]
-    gallery_embeddings = torch.stack(gallery_embeddings)
-
-    distance_func = (
-        EuclideanDistance() if dist_fn == "euclidean" else torch.nn.CosineSimilarity()
-    )
-
-    gallery_dists = torch.tensor(
-        [
-            distance_func(subject_embedding, face_embedding).detach().item()
-            for subject_embedding in gallery_embeddings
-        ],
-        requires_grad=False,
-    )
-
-    if dist_fn == "euclidean":
-        max_dist = torch.max(gallery_dists).item()
-        gallery_dists /= max_dist
-        threshold = eucl_dist_thr / max_dist if eucl_dist_thr > 1.0 else eucl_dist_thr
-        gallery_dists = torch.tensor(
-            [
-                max(1 / (1 + score), 0.75) if score <= threshold else max(w - score, 0.0)
-                for score in gallery_dists.numpy()
-            ],
-            requires_grad=False,
-        )
-    
-    if dist_fn == "cosine":
-        gallery_dists = (gallery_dists + 1.0) / 2
-        
-    assert torch.min(gallery_dists) >= 0.0 and torch.max(gallery_dists) <= 1.0
-
-    # It is actually gallery similarity, not dist
-    return gallery_dists
-
-
-def uccs_image_inference(cyberusModel, image_path) -> str:
+def uccs_image_inference(cyberusModel : torch.nn.Module, image_path : str) -> str:
     """Perform an inference on an image and output
     a string representing rows in the submission
-    file.
-
-    # TODO: Docstrings
+    file for the given image. The string conforms
+    to the required format of the UCCS challenge.
 
     Parameters
     ----------
-    gallery : dict[int, torch.Tensor]
-        A dictionary of identities. For each identity in the gallery, there
-        is the identity's embedding stored, which is compared to the provided
-        face embedding.
-    model : nn.Module
-        Model that should be used for the inference
+    cyberusModel : torch.nn.Module
+        Instantiated CyberuSentry model with UCCS gallery
+        loaded.
     image_path : str
         Path to the image to be inferred
-    dist_fn
-        Which distance function to use when computing gallery similarity
+
+    Returns
+    ----------
+    str
+        Row(s) to be appended to the submission file.
+        Can consist of multiple rows, if multiple
+        detections were found in the image.
     """
-    image = read_image(image_path, convert_to_tensor=False, scale=False)
+    image = read_image(image_path, scale=False)
 
     # Init same settings as UCCS baseline detector
     face_detector = fp.MTCNN(thresholds=[0.2, 0.2, 0.2])
@@ -316,19 +234,26 @@ def uccs_image_inference(cyberusModel, image_path) -> str:
     return ret_str
 
 
-def uccs_eval(model: torch.nn.Module, uccs_root: str, path_to_protocol_csv: str):
+def uccs_eval(model: torch.nn.Module, uccs_root: str, path_to_protocol_csv: str) -> None:
     """Run evaluation on the provided csv file (either val or test).
     This function should save the required file for the final submission.
     As such, the "model" parameter is now a fully instantiated nn.Module,
     which in its forward produces the similarities to UCCS gallery subjects.
-    These outputs are used to produce the final file.
+    
+    Since the baseline csv files provided for validation and testing
+    are split into multiple partitions (1-9 for val, 1-17 for test),
+    this function is applied per-partition and yields csv files
+    with the predictions for each partition. As such, the final
+    csv for submission must be created by merging the partitions.
 
     Parameters
     ----------
     model : torch.nn.Module
         Instantiated identification model
     path_to_protocol_csv : str
-        Path to the source csv which should include image path names and their detected bounding boxes.
+        Path to the source csv which should include
+        image path names and their detected bounding
+        boxes.
     """
     df = pd.read_csv(path_to_protocol_csv, delimiter=",", header=0)
     # VAL: FILE,FACE_ID,SUBJECT_ID,FACE_X,FACE_Y,FACE_WIDTH,FACE_HEIGHT
@@ -352,8 +277,9 @@ def uccs_eval(model: torch.nn.Module, uccs_root: str, path_to_protocol_csv: str)
     )
     split = "validation" if mode == "val" else "test"
 
-    # Now that we have potentially unified the dataframes, select only relevant columns
-    # OUTPUT: FILE,DETECTION_SCORE,BB_X,BB_Y,BB_WIDTH,BB_HEIGHT,S_0001, ..., S1000
+    # Now that we ensured that the dataframes are unified, select only relevant columns
+    # SUBMISSION OUTPUT FORMAT: FILE,DETECTION_SCORE,BB_X,BB_Y,BB_WIDTH,BB_HEIGHT,S_0001, ..., S1000
+    # Keep only the following columns, subject scores will be computed soon.
     df = df[["FILE", "DETECTION_SCORE", "BB_X", "BB_Y", "BB_WIDTH", "BB_HEIGHT"]]
 
     # Create placeholder columns for the subjects S_0001, ..., S_1000
@@ -361,7 +287,9 @@ def uccs_eval(model: torch.nn.Module, uccs_root: str, path_to_protocol_csv: str)
         df[f"S_{(subject_col + 1):04d}"] = np.nan
 
     # Now the evaluation loop. Iterate over images in the folder, find the respective rows in the df
-    # and update the values there.
+    # and update the values there. Iterating over rows in the df would be much slower, since we would
+    # need to open and close a given image several times. Considering the images are high resolution,
+    # it would be painfully slow.
     for partition in partitions:
         partition_df = []
         partition_path = f"{uccs_root}/{split}_{partition}/{split}_images"
@@ -392,12 +320,14 @@ def uccs_eval(model: torch.nn.Module, uccs_root: str, path_to_protocol_csv: str)
                 if len(model_preds.shape) >= 1:
                     model_preds = model_preds.squeeze()
 
+                # For debugging purposes, can come in handy
                 #print("Predicted subject ", torch.argmax(model_preds).item() + 1, "With score: ", model_preds[torch.argmax(model_preds).item()])
 
+                # Get the row of the detection
                 nd = df.iloc[index].to_dict()
-                for i in range(len(model_preds)):
-                    # Sometimes the metric yields (although very close to 0) negative values, clip them to be safe TBD rewrite
-                        
+
+                # Flush the predictions into the row
+                for i in range(len(model_preds)):  
                     nd[f"S_{(i+1):04d}"] = (
                         str(model_preds[i].item())[:8]
                     )
@@ -410,7 +340,17 @@ def uccs_eval(model: torch.nn.Module, uccs_root: str, path_to_protocol_csv: str)
         )
 
 
-def merge_eval_csv(mode: Literal["val", "test"]):
+def merge_eval_csv(mode: Literal["val", "test"]) -> None:
+    """Merge the csv files produced by 'uccs_eval' function.
+    Since the evaluation data was provided by the organizers
+    in several partitions, the partitions need to be merged
+    together to produce the final submission file.
+
+    Parameters
+    ----------
+    mode : Literal["val", "test"]
+        Csv files of which stage to merge together
+    """
     csv_partitions = (
         list(range(1, 9)) if mode == "val" else [f"{part:02d}" for part in range(1, 17)]
     )
@@ -426,7 +366,21 @@ def merge_eval_csv(mode: Literal["val", "test"]):
     final_df.to_csv(f"{partition}-final.csv", sep=",", index=False, header=True)
 
 
-def square_df(csv_final_path: str):
+def square_df(csv_final_path: str) -> None:
+    """One of my experiments was to try to
+    square the predictions of the models.
+    The organizers state in the instructions
+    that assigning high confidences to misdetections
+    or wrong identities 'will lead to penalties'. By
+    squaring the predictions, the small values will
+    get shrunk and the most confident predictions will
+    remain strong.
+
+    Parameters
+    ----------
+    csv_final_path : str
+        Path to the final csv file.
+    """
     df = pd.read_csv(csv_final_path, sep=",", header=0)
 
     for col in tqdm(df.columns, desc="Squaring subject columns"):
@@ -441,12 +395,34 @@ def square_df(csv_final_path: str):
     )
 
 
-def shift_values(csv_path : str, direction="left"):
+def shift_values(csv_path : str, direction="left") -> None:
+    """As pointed out by one of the organizers,
+    the expected predictions in the submission
+    files are Cosine Similarities, which fall in
+    the [-1, 1] range. Since my models are designed
+    to produce predictions in [0, 1] range, I need
+    to shift the final csv files' predictions before 
+    the submission. It would not be a disaster per se,
+    the evaluation should still work, but let's make
+    sure everything is correct :)
+
+    Parameters
+    ----------
+    csv_path : str
+        Path to the uccs csv file
+    direction : str, optional
+        left:
+            Shift from [0, 1] to [-1, 1]
+        right:
+            Shift from [1, 1] to [0, 1]
+    """
     df = pd.read_csv(csv_path, sep=",", header=0)
 
     for col in tqdm(df.columns, desc=f"Shifting subject columns to the {direction}"):
         if str(col).startswith("S_"):
-            df[col] = df[col].apply(lambda x: f"{((x * 2) - 1):5f}" if direction == "left" else  f"{((x + 1) / 2):5f}")
+            df[col] = df[col].apply(
+                lambda x: f"{((x * 2) - 1):5f}" if direction == "left" else  f"{((x + 1) / 2):5f}"
+            )
 
     df.to_csv(
         csv_path.replace(".csv", "-shifted.csv"),
@@ -457,18 +433,21 @@ def shift_values(csv_path : str, direction="left"):
 
 
 if __name__ == "__main__":
-    #merge_eval_csv("test")
-    #square_df("test-final.csv")
-    #exit(1)
-    # ------------------------------------------------------------------
-    """ Prepare dataset with cropped faces
+    """
+    This file was used in quite a chaotic and unstructured manner due to
+    increased time pressure. Since I do not expect this file to be
+    worked upon in the future, I'll leave it as is with examples how
+    I worked with it.
+    
+    -------------------------------------------------------------------
+    1) PREPARE DATASET WITH CROPPED FACES CONFORMING TO FACE_DATASET
+       CLASS (CROP THE FACES AND SAVE THEM AS INDIVIDUAL IMAGES IN 
+       THE APPROPRIATE FOLDER)
     
     prepare_val_identities("C:/data/UCCSChallenge", "C:/data/uccs_prep")
-    
-    """
-    # ------------------------------------------------------------------
-    """
-    #Prepare Gallery
+    -------------------------------------------------------------------
+    2) PREPARE THE UCCS GALLERY FILE (ONCE EACH HEAD COMPLETED ITS TRAINING,
+    ITS GALLERY HAD TO BE COMPUTED FOR USE IN THE FINAL ENSEMBLE)
     
     gallery_path = "C:/data/UCCSChallenge/gallery_images/gallery_images"
     model = "model-6-val-0.0"
@@ -478,12 +457,10 @@ if __name__ == "__main__":
 
     with open(f"gallery_{model.split(".")[0]}-{reduction}.pkl", "wb") as f:
         pickle.dump(gallery, f)
-    exit(1)
-    """
-
-    # ------------------------------------------------------------------
-    """
-    #Search an identity from an image in UCCS gallery
+    ------------------------------------------------------------------
+    3) SEARCH AN IDENTITY FROM AN IMAGE IN THE UCCS GALLERY (RUN THE
+       FULL PROCESS. LOAD AN IMAGE -> CROP FACES -> IDENTIFY FACES -> OUTPUT
+       PREDICTION)
 
     image_embedding = run_inference_image(
         "model-6-val-54.003331661224365", "0947_9.png", False
@@ -491,22 +468,11 @@ if __name__ == "__main__":
     image_embedding = image_embedding[list(image_embedding.keys())[0]]
     gallery_file = open("gallery_model-6-val-54-avg.pkl", "rb")
     gallery = pickle.load(gallery_file)
-    print(torch.argmax(gallery_similarity(gallery, image_embedding, "cosine"))) # Will not work, need to provide the model now
-    """
-    # ------------------------------------------------------------------
-    """
-    # UCCS image inference
-
-    model = restore_model("model-30-train-6585.611407843418")
-    image_path = "img/obama.jpg"
-    gallery_file = open("gallery_model-24-val-37-avg.pkl", "rb")
-    gallery = pickle.load(gallery_file)
-    print(uccs_image_inference(gallery, model, image_path, "cosine"))
-    """
-    # ------------------------------------------------------------------
-    # CyberuSentry
+    print(torch.argmax(gallery_similarity(gallery, image_embedding, "cosine")))
+    ------------------------------------------------------------------
+    4) FINAL EVALUATION PIPELINE (USED IN THE FINAL SUBMISSION)
     from cyberusentry import CyberuSentry
-
+    
     kerberos = CyberuSentry(
         "model-24-val-37.60191621913782",
         EvaTiny(activate=False),
@@ -518,7 +484,7 @@ if __name__ == "__main__":
         EvaTiny(),
         "gallery_model-24-val-161-avg.pkl",
     )
-    
+
     uccs_eval(
         kerberos,
         "C:/data/UCCSChallenge",
@@ -540,3 +506,4 @@ if __name__ == "__main__":
     shift_values("test-final-squared.csv")
     shift_values("validation-final.csv")
     shift_values("validation-final-squared.csv")
+    """

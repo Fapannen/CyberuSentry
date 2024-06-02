@@ -4,33 +4,26 @@ import numpy as np
 from pathlib import Path
 
 
-def read_image(
-    path, convert_to_tensor: bool = True, scale: bool = True
-) -> np.ndarray | torch.Tensor:
+def read_image(path: str, scale: bool = True) -> np.ndarray:
     """Reads an image, converts it to RGB and optionally converts it to
     torch.Tensor or scales the values into [0, 1].
 
-    Note that this function does not do any resizing or input transformations,
-    nor augmentations. These shall be handled later in the code.
+    This function does not do any resizing or input transformations
+    (except scaling the values, if set) nor augmentations etc.
+    These shall be handled elsewhere.
 
         Parameters
         ----------
         path : str | Path
                 Full path to the image to be read.
-        convert_to_tensor : bool, optional
-                Convert the image to PyTorch tensor
-                (Including the HWC -> CHW conversion)
         scale : bool, optional
                 Scale the values into [0, 1] range
 
-
         Returns
         -------
-        np.ndarray | torch.Tensor
-                Opened image either as a
+        np.ndarray
+                Opened image as a
                 {np.ndarray, RGB, HWC}
-                or
-                {torch.Tensor, RGB, CHW}
     """
     image = cv2.imread(path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -38,13 +31,13 @@ def read_image(
     if scale:
         image = image / 255.0
 
-    image = numpy_to_model_format(image) if convert_to_tensor else image
-
     return image
 
 
 def numpy_to_model_format(
-    image: np.ndarray, add_batch_dim: bool = False
+    image: np.ndarray,
+    target_size: int | tuple[int, int] = 224,
+    add_batch_dim: bool = False,
 ) -> torch.Tensor:
     """Convert a numpy image to a torch Tensor.
             Includes:
@@ -60,16 +53,23 @@ def numpy_to_model_format(
     image : np.ndarray
             Image as a numpy array. Expects to already be
             in BGR and HWC format.
+    input_size :
+            size of the model format input image. Can be
+            either a single integer or a tuple.
     add_batch_dim : bool, optional
-            _description_, by default False
+            Whether to produce a BCHW tensor or just a CHW.
+            By default False -> CHW
 
     Returns
     -------
     torch.Tensor
-            processed image in Tensor format, ready to
-            be consumed by the model.
+            Processed image in Tensor format. If batch dim
+            is added, the output should be directly
+            consumable by the model.
     """
-    input_size = (224, 224)
+    input_size = (
+        (target_size, target_size) if isinstance(target_size, int) else target_size
+    )
 
     image = cv2.resize(image, input_size)
 
@@ -86,7 +86,8 @@ def numpy_to_model_format(
 
 
 def model_format_to_numpy(image: torch.Tensor) -> np.ndarray:
-    """Convert Tensor represented image to numpy representation
+    """Convert Tensor represented image to numpy representation.
+    Ditch the batch dimension, change from CHW to HWC.
 
     Parameters
     ----------
@@ -107,7 +108,19 @@ def model_format_to_numpy(image: torch.Tensor) -> np.ndarray:
     return image
 
 
-def debug_samples_batch(batch: torch.Tensor, output_dir: str = "./debug") -> None:
+def save_batch_samples(batch: torch.Tensor, output_dir: str = "./debug") -> None:
+    """Save a batch of images during training for
+    manual examination if everything is working
+    properly.
+
+    Parameters
+    ----------
+    batch : torch.Tensor
+        One batch of data, expected shape is BCHW
+    output_dir : str, optional
+        Path to a directory where the images shall be saved.
+        By default "./debug"
+    """
     out_path = Path(output_dir).resolve()
     out_path.mkdir(exist_ok=True, parents=True)
 

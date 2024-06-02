@@ -15,7 +15,11 @@ def restore_model(
     device : str, optional
         On which torch.device to load Defaults to "cuda".
     config_name : str, optional
-        Name of the config. Defaults to "config-default"
+        Name of the config which was used to construct
+         the loaded model. This is necessary to know
+         what model class to instantiate for successful
+         loading of the weights.
+         Defaults to "config-default"
 
     Returns
     -------
@@ -27,7 +31,11 @@ def restore_model(
     try:
         hydra.initialize(version_base=None, config_path="../config")
     except:
-        pass
+        print(
+            """Failed to initialize hydra. It might be already
+               initialized which causes an error. Attempting without
+               initializing ..."""
+        )
     finally:
         config = hydra.compose(config_name=config_name)
 

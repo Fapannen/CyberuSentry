@@ -6,17 +6,29 @@ from uccs import gallery_similarity
 
 
 class CyberuSentry(nn.Module):
+    """Class CyberuSentry implementing the cherry on top
+    of this whole repository. CyberuSentry model is composed
+    of three individual heads, "cer", "ber", and "os".
+
+    For the purposes of UCCS Challenge, each individual head
+    needs to come with its own gallery corresponding to UCCS
+    identities.
+
+    In the future, gallery-less functionality should also be
+    possible.
+    """
+
     def __init__(
         self,
-        h1_path,
-        h1_class_instance,
-        h1_gallery,
-        h2_path,
-        h2_class_instance,
-        h2_gallery,
-        h3_path,
-        h3_class_instance,
-        h3_gallery,
+        h1_path: str,
+        h1_class_instance: nn.Module,
+        h1_gallery: str,
+        h2_path: str,
+        h2_class_instance: nn.Module,
+        h2_gallery: str,
+        h3_path: str,
+        h3_class_instance: nn.Module,
+        h3_gallery: str,
     ) -> None:
         super().__init__()
         self.device = "cpu"
@@ -40,16 +52,18 @@ class CyberuSentry(nn.Module):
         # OS
         self.os_path = h3_path
         self.os = h3_class_instance
-        self.os.eval()
         self.os.load_state_dict(torch.load(self.os_path, map_location=self.device))
+        self.os.eval()
         with open(h3_gallery, "rb") as os_gal:
             self.os_gallery = pickle.load(os_gal)
 
     def forward(self, x):
         with torch.no_grad():
             cer_out = self.cer(x)
+            # Head1 EvaTinyEuclid =     ..., 1.75, 0.4
+            # Head5 MobileNetV2Euclid = ..., 8.5,  0.6
             cer_out = gallery_similarity(
-                self.cer_gallery, cer_out, "euclidean", 1.75, 0.4, 4
+                self.cer_gallery, cer_out, "euclidean", 1.75, 0.4
             )
 
             ber_out = self.ber(x)

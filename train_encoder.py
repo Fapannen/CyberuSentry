@@ -7,7 +7,7 @@ from torch.utils.data import ConcatDataset
 
 from sampler.sampler import IdentitySampler
 from utils.model import restore_model
-from utils.image import debug_samples_batch
+from utils.image import save_batch_samples
 from utils.triplet import build_triplets
 
 
@@ -125,7 +125,7 @@ def main(cfg: DictConfig):
 
             # Plot images to see what is being fed into the network
             if i == 0:
-                debug_samples_batch(batch)
+                save_batch_samples(batch)
 
             optimizer.zero_grad()
 

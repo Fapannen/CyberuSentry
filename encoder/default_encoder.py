@@ -19,19 +19,6 @@ class SentryEncoder(nn.Module):
         self.fc2 = nn.LazyLinear(embedding_dim)
 
     def forward(self, x):
-        """Forward the inputs
-
-        Parameters
-        ----------
-        x : torch.Tensor
-            input to be forwarded
-
-        Returns
-        -------
-        output
-            Processed input
-        """
-
         x = self.conv1(x)
         x = self.activation(x)
 
