@@ -9,10 +9,11 @@ inference, it might be a good idea to get just the
 '.item()' value.
 """
 
+
 class EuclideanDistance:
-    def __call__(self, a : torch.Tensor, b : torch.Tensor) -> torch.Tensor:
+    def __call__(self, a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
         """Compute the euclidean distance between two tensors.
-        Tensors are expected to be either the same, or 
+        Tensors are expected to be either the same, or
         broadcastable shapes, no additional handling is done.
 
         Returns
@@ -29,7 +30,7 @@ class CosineDistance:
     def __init__(self) -> None:
         self.fn = torch.nn.CosineSimilarity()
 
-    def __call__(self, a : torch.Tensor, b : torch.Tensor) -> torch.Tensor:
+    def __call__(self, a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
         """Compute the Cosine distance between two tensors.
         torch.nn.CosineSimilarity() cannot be applied on
         1-D tensors, so any 1-D tensor passed to this

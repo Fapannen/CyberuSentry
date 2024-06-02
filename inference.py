@@ -14,14 +14,18 @@ from dist_fn.distances import EuclideanDistance, CosineDistance
 
 
 def run_inference_video(
-    model_path : str, video_path : str, dist_fn :str, each_nth_frame : int = 30, unique_dist_threshold : float = 0.5,
-    config_name: str = "config-default"
+    model_path: str,
+    video_path: str,
+    dist_fn: str,
+    each_nth_frame: int = 30,
+    unique_dist_threshold: float = 0.5,
+    config_name: str = "config-default",
 ) -> None:
-    """This function analyzes the provided video file 
+    """This function analyzes the provided video file
     using a provided model. This function creates a
     directory where all detected faces will be assigned
     to an identity. Identities are built on-the-go.
-    New identity is determined based on 
+    New identity is determined based on
     'unique_dist_threshold' where all faces that have
     its embedding distance greater than 'unique_dist_threshold'
     from all already established identities are assigned
@@ -178,7 +182,7 @@ def run_inference_image(
     image_path: str,
     save_face: bool = True,
     face_detector: torch.nn.Module | None = None,
-    config_name: str = "config-default"
+    config_name: str = "config-default",
 ) -> dict[str, np.ndarray] | None:
     """Function for a complete embedding extraction from an image.
     Includes loading the model, loading the image, detecting faces,
@@ -228,7 +232,11 @@ def run_inference_image(
 
     # If an instantiated model is passed, use that one.
     # Otherwise load a checkpoint
-    model = restore_model(model, device="cpu", config_name=config_name) if isinstance(model, str) else model
+    model = (
+        restore_model(model, device="cpu", config_name=config_name)
+        if isinstance(model, str)
+        else model
+    )
     model.eval()
 
     # Yields a tuple (bboxes, confidences)
@@ -271,7 +279,13 @@ def run_inference_image(
     }
 
 
-def run_inference_images(model_path: str, img1: str, img2: str, dist_fn: str, config_name: str = "config-default") -> None:
+def run_inference_images(
+    model_path: str,
+    img1: str,
+    img2: str,
+    dist_fn: str,
+    config_name: str = "config-default",
+) -> None:
     """Run inference on two images and print out differences
     between individual faces in both images.
 
@@ -370,11 +384,13 @@ if __name__ == "__main__":
             args.dist_fn,
             each_nth_frame=args.frames_to_skip,
             unique_dist_threshold=args.threshold,
-            config_name=args.config_name
+            config_name=args.config_name,
         )
 
     elif args.img1 is not None and args.img2 is not None:
-        run_inference_images(args.model_path, args.img1, args.img2, args.dist_fn, args.config_name)
+        run_inference_images(
+            args.model_path, args.img1, args.img2, args.dist_fn, args.config_name
+        )
 
     else:
         print("Unrecognized combination of arguments, exitting ...")

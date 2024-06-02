@@ -17,7 +17,7 @@ def restore_model(
     config_name : str, optional
         Name of the config which was used to construct
          the loaded model. This is necessary to know
-         what model class to instantiate for successful 
+         what model class to instantiate for successful
          loading of the weights.
          Defaults to "config-default"
 
@@ -31,9 +31,11 @@ def restore_model(
     try:
         hydra.initialize(version_base=None, config_path="../config")
     except:
-        print("""Failed to initialize hydra. It might be already
+        print(
+            """Failed to initialize hydra. It might be already
                initialized which causes an error. Attempting without
-               initializing ...""")
+               initializing ..."""
+        )
     finally:
         config = hydra.compose(config_name=config_name)
 

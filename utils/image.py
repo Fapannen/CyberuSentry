@@ -4,9 +4,7 @@ import numpy as np
 from pathlib import Path
 
 
-def read_image(
-    path: str, scale: bool = True
-) -> np.ndarray:
+def read_image(path: str, scale: bool = True) -> np.ndarray:
     """Reads an image, converts it to RGB and optionally converts it to
     torch.Tensor or scales the values into [0, 1].
 
@@ -37,7 +35,9 @@ def read_image(
 
 
 def numpy_to_model_format(
-    image: np.ndarray, target_size: int | tuple[int, int] = 224, add_batch_dim: bool = False, 
+    image: np.ndarray,
+    target_size: int | tuple[int, int] = 224,
+    add_batch_dim: bool = False,
 ) -> torch.Tensor:
     """Convert a numpy image to a torch Tensor.
             Includes:
@@ -59,7 +59,7 @@ def numpy_to_model_format(
     add_batch_dim : bool, optional
             Whether to produce a BCHW tensor or just a CHW.
             By default False -> CHW
-    
+
     Returns
     -------
     torch.Tensor
@@ -67,7 +67,9 @@ def numpy_to_model_format(
             is added, the output should be directly
             consumable by the model.
     """
-    input_size = (target_size, target_size) if isinstance(target_size, int) else target_size
+    input_size = (
+        (target_size, target_size) if isinstance(target_size, int) else target_size
+    )
 
     image = cv2.resize(image, input_size)
 

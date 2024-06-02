@@ -72,18 +72,25 @@ def gallery_similarity(
         threshold = eucl_dist_thr / max_dist if eucl_dist_thr > 1.0 else eucl_dist_thr
         gallery_similarities = torch.tensor(
             [
-                max(1 / (1 + score), 0.75) if score <= threshold else max(w - score, 0.0)
+                (
+                    max(1 / (1 + score), 0.75)
+                    if score <= threshold
+                    else max(w - score, 0.0)
+                )
                 for score in gallery_similarities.numpy()
             ],
             requires_grad=False,
         )
-    
+
     if dist_fn == "cosine":
         # CosineSimilarity outputs values in [-1, 1] range
         # so shift them to [0, 1].
         gallery_similarities = (gallery_similarities + 1.0) / 2
-        
-    assert torch.min(gallery_similarities) >= 0.0 and torch.max(gallery_similarities) <= 1.0
+
+    assert (
+        torch.min(gallery_similarities) >= 0.0
+        and torch.max(gallery_similarities) <= 1.0
+    )
 
     # It is actually gallery similarity, not dist
     return gallery_similarities

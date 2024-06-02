@@ -6,7 +6,7 @@ def build_triplets(
     pos_embs: torch.Tensor,
     neg_embs: torch.Tensor,
     min_samples_per_id: int,
-    dist_fn : Callable,
+    dist_fn: Callable,
     triplet_setting=Literal["semi-hard", "hard", "batch-hard"],
     margin: float = 0.2,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -78,7 +78,9 @@ def build_triplets(
 
     # batch-hard requires a little different logic
     if triplet_setting == "batch-hard":
-        return build_batch_hard_triplets(pos_embs, neg_embs, min_samples_per_id, dist_fn)
+        return build_batch_hard_triplets(
+            pos_embs, neg_embs, min_samples_per_id, dist_fn
+        )
 
     triplets = []
 
@@ -111,7 +113,9 @@ def build_triplets(
                     # THEN
                     # This combination is semi-hard because it is correctly ordered, but we wanna
                     # push them apart a little.
-                    if (dist_fn(pos_emb1, pos_emb2) < dist_fn(pos_emb1, neg_embs[k])) and abs(
+                    if (
+                        dist_fn(pos_emb1, pos_emb2) < dist_fn(pos_emb1, neg_embs[k])
+                    ) and abs(
                         dist_fn(pos_emb1, neg_embs[k]) - dist_fn(pos_emb1, pos_emb2)
                     ) < margin:
                         indices_satisfies_semihard.append(k)
@@ -175,7 +179,7 @@ def build_batch_hard_triplets(
     pos_embs: torch.Tensor,
     neg_embs: torch.Tensor,
     min_samples_per_id: int,
-    dist_fn : Callable,
+    dist_fn: Callable,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     triplets = []
 
