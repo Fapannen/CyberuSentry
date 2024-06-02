@@ -471,7 +471,6 @@ if __name__ == "__main__":
     print(torch.argmax(gallery_similarity(gallery, image_embedding, "cosine")))
     ------------------------------------------------------------------
     4) FINAL EVALUATION PIPELINE (USED IN THE FINAL SUBMISSION)
-
     from cyberusentry import CyberuSentry
     
     kerberos = CyberuSentry(
