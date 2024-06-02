@@ -21,7 +21,7 @@ The competition started on March 1, 2024. I signed up after I found the competit
 Deadline for submitting all the necessary files was June 1, 2024. Thus, I had less than six weeks to fulfil the assignment.
 
 # Models
-Since the UCCS Dataset is not public at the moment, models will not be released as every single one of them was trained using the private data.
+Since the UCCS Dataset is not public at the moment, the trained models will not be released as every single one of them was trained using the private data.
 Should the dataset become public in the future, I will reevaluate publishing the models again.
 
 # Sources
