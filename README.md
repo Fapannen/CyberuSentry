@@ -20,6 +20,10 @@ face detectors were used to facilitate work in this repository.
 The competition started on March 1, 2024. I signed up after I found the competition was ongoing and my application was approved on March 22, 2024.
 Deadline for submitting all the necessary files was June 1, 2024. Thus, I had less than six weeks to fulfil the assignment.
 
+# Models
+Since the UCCS Dataset is not public at the moment, models will not be released as every single one of them was trained using the private data.
+Should the dataset become public in the future, I will reevaluate publishing the models again.
+
 # Sources
 - Images were generated using [Gencraft](https://gencraft.com/) website. All images used were created under a paid subscription.
 - [Cambridge Dictionary](https://dictionary.cambridge.org/)
