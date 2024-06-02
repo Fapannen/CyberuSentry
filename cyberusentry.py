@@ -57,7 +57,26 @@ class CyberuSentry(nn.Module):
         with open(h3_gallery, "rb") as os_gal:
             self.os_gallery = pickle.load(os_gal)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Run inference on the provided input.
+        Input is expected to be a cropped face converted
+        to a model format. Face is run through each head,
+        similarity scores against the UCCS gallery are
+        computed and the average of them is returned back.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input tensor, expected to be a cropped face
+
+        Returns
+        -------
+        torch.Tensor
+            Tensor of shape [1, num_identities] where
+            'num_identities' is the number of indentities
+            in the gallery. Unlike standard Cosine Similarity,
+            The values are in [0, 1] range.
+        """
         with torch.no_grad():
             cer_out = self.cer(x)
             # Head1 EvaTinyEuclid =     ..., 1.75, 0.4
