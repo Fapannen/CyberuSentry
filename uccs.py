@@ -414,7 +414,7 @@ def shift_values(csv_path : str, direction="left") -> None:
         left:
             Shift from [0, 1] to [-1, 1]
         right:
-            Shift from [1, 1] to [0, 1]
+            Shift from [-1, 1] to [0, 1]
     """
     df = pd.read_csv(csv_path, sep=",", header=0)
 

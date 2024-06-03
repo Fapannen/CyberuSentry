@@ -18,7 +18,7 @@ face identification problem. There was also a part dedicated to face detection, 
 face detectors were used to facilitate work in this repository.
 
 The competition started on March 1, 2024. I signed up after I found the competition was ongoing and my application was approved on March 22, 2024.
-Deadline for submitting all the necessary files was June 1, 2024. Thus, I had less than six weeks to fulfil the assignment.
+Deadline for submitting all the necessary files was June 1, 2024.
 
 # Models
 Since the UCCS Dataset is not public at the moment, the trained models will not be released as every single one of them was trained using the private data.
