@@ -1,0 +1,5 @@
+definition:
+  _target_: encoder.mobilenet.MobileNetV2
+  num_classes: 192 # Essentially embedding dim
+
+input_size: [224, 224]

@@ -1,0 +1,28 @@
+definition:
+  _target_: torchvision.transforms.v2.Compose
+  transforms:
+
+    # Fight blurred images
+    - _target_: torchvision.transforms.v2.RandomApply
+      transforms:
+        - _target_: torchvision.transforms.v2.GaussianBlur
+          kernel_size: 7
+      p: 0.25
+    
+    # Random Rotation - faces can be somehow rotated sometimes
+    - _target_: torchvision.transforms.v2.RandomApply
+      transforms:
+        - _target_: torchvision.transforms.v2.RandomRotation
+          degrees: 10 # [-10, 10]
+      p: 0.25
+
+    # Imitate different lightning conditions
+    - _target_: torchvision.transforms.v2.RandomApply
+      transforms:
+        - _target_: torchvision.transforms.v2.ColorJitter
+          brightness: 0.5
+          contrast: 0.3
+          saturation: null
+          hue: null
+      p: 0.5
+    

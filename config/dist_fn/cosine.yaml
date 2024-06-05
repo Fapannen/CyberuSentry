@@ -1,0 +1,2 @@
+definition:
+  _target_: dist_fn.distances.CosineDistance

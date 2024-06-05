@@ -1,0 +1,5 @@
+definition:
+  _target_: encoder.eva_tiny.EvaTiny
+  pretrained: true
+
+input_size: [224, 224]

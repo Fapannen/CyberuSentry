@@ -1,0 +1,16 @@
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Folders
+data/
+debug/
+outputs/
+
+# VScode
+.vscode
+
+# Misc
+*.jpg
+*.jpeg
+*.mp4

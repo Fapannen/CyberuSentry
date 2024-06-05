@@ -1,0 +1,5 @@
+definition:
+  _target_: encoder.inception.InceptionV3
+  embedding_dim: 128
+
+input_size: [299, 299]
