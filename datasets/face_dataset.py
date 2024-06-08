@@ -82,8 +82,11 @@ class FaceDataset(Dataset):
     def build_identities(self) -> dict[int, list[str]]:
         raise NotImplementedError("This method has to be implemented!")
 
-    def __len__(self):
-        # Represent one epoch as one cycle per each "usable" identity
+    def __len__(self) -> int:
+        # Represent one epoch as one cycle per each "usable" identity.
+        # Usable identity means that we have at least two samples of
+        # the given identity. This is because for the triplet loss,
+        # we need additional samples of a positive class.
         return self.num_mto_identities
 
     def get_same_identity_tuple(self, origin_identity: int) -> tuple[str, str]:
@@ -104,7 +107,8 @@ class FaceDataset(Dataset):
         sample2 = random.choice([s for s in identity_samples if s != sample1])
         return sample1, sample2
 
-    def get_same_identity(self, identity: int) -> str:
+    def get_identity(self, identity: int) -> str:
+        # Returns path to another sample of the same identity.
         return random.choice(self.identities[identity])
 
     def get_different_identity(self, origin_identity: int) -> tuple[str, int]:
@@ -149,7 +153,7 @@ class FaceDataset(Dataset):
         origin_identity = self.mto_identities[idx]
 
         # Get tuple of the same identity
-        pos_img = self.get_same_identity(origin_identity)
+        pos_img = self.get_identity(origin_identity)
 
         # Get another identity
         neg_img, neg_identity = self.get_different_identity(origin_identity)

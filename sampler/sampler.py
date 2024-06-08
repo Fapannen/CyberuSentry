@@ -68,5 +68,5 @@ class IdentitySampler(Sampler):
             # and so on, until the dataset is exhausted
             yield [(i * self.ids_per_batch) + j for j in ids]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.num_batches
