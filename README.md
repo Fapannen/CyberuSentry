@@ -8,7 +8,8 @@ Welcome to CyberuSentry! CyberuSentry is a mixture of 4 words that describe the 
   - [Entry](https://dictionary.cambridge.org/dictionary/english/entry) - The act of entering a place
 
 In this repository you can find the implementation for the CyberuSentry model. CyberuSentry is an ensemble of siamese neural networks
-developed for the purpose of participating in the [UCCS Watchlist Challenge](https://www.ifi.uzh.ch/en/aiml/challenge.html). 
+developed for the purpose of participating in the [UCCS Watchlist Challenge](https://www.ifi.uzh.ch/en/aiml/challenge.html). You can find
+the summary paper on [this link](https://arxiv.org/abs/2409.07220)
 
 The model unfortunately placed last in the challenge. However, such a benchmark conducted by a third-party organization provides valuable
 insight into the current state of the model, which is one of the main reasons why I decided to sign up for the challenge. Overall, I am 
@@ -28,7 +29,8 @@ Since only four teams participated in the challenge, the results are a little sc
 were individuals like me, or whether some contestants submitted their results on behalf of a commercial or academic institution. More information about
 other participants will be published later.
 
-You can find the evaluation curves below. Models from my submissions are highlighted in the red rectangle.
+You can find the evaluation curves below. Models from my submissions are highlighted in the red rectangle. For more details, please refer to the
+[summary paper](https://arxiv.org/abs/2409.07220)
 
 ### Validation results of the submitted models
 <img src="img/results_val.png" width="800" height="450" />
