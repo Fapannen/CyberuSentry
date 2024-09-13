@@ -27,7 +27,7 @@ The deadline for submitting all the necessary files was June 1, 2024.
 
 Since only four teams participated in the challenge, the results are a little scarce. However, as the other participating teams included, among others,
 eg. Federal Police of Brazil, I assume the participant field was very competetive. In retrospective, I am satisfied with the overall results, as I was
-developing the project completely alone, in my free time and using my limited computational resources. Just the fact that I managed to develop a 
+developing the project completely alone, from scratch, in my free time and using my limited computational resources. Just the fact that I managed to develop a 
 working facial recognition system in two months is considered a success in my eyes. I am confident that I could improve the results, had we been
 given some more time.
 
