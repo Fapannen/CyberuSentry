@@ -9,7 +9,7 @@ Welcome to CyberuSentry! CyberuSentry is a mixture of 4 words that describe the 
 
 In this repository you can find the implementation for the CyberuSentry model. CyberuSentry is an ensemble of siamese neural networks
 developed for the purpose of participating in the [UCCS Watchlist Challenge](https://www.ifi.uzh.ch/en/aiml/challenge.html). You can find
-the summary paper on [this link](https://arxiv.org/abs/2409.07220)
+the summary paper on [this link](https://arxiv.org/abs/2409.07220), and relevant poster [here](watchlist_challenge_Poster.pdf)
 
 The model unfortunately placed last in the challenge. However, such a benchmark conducted by a third-party organization provides valuable
 insight into the current state of the model, which is one of the main reasons why I decided to sign up for the challenge. Overall, I am 
