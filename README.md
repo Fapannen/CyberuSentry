@@ -25,9 +25,11 @@ face detectors were used to facilitate work in this repository.
 The competition started on March 1, 2024. I signed up after I found the competition was ongoing and my application was approved on March 22, 2024.
 The deadline for submitting all the necessary files was June 1, 2024.
 
-Since only four teams participated in the challenge, the results are a little scarce. I have no idea what I was up against, whether the other contestants
-were individuals like me, or whether some contestants submitted their results on behalf of a commercial or academic institution. More information about
-other participants will be published later.
+Since only four teams participated in the challenge, the results are a little scarce. However, as the other participating teams included, among others,
+eg. Federal Police of Brazil, I assume the participant field was very competetive. In retrospective, I am satisfied with the overall results, as I was
+developing the project completely alone, in my free time and using my limited computational resources. Just the fact that I managed to develop a 
+working facial recognition system in two months is considered a success in my eyes. I am confident that I could improve the results, had we been
+given some more time.
 
 You can find the evaluation curves below. Models from my submissions are highlighted in the red rectangle. For more details, please refer to the
 [summary paper](https://arxiv.org/abs/2409.07220)
@@ -39,7 +41,7 @@ You can find the evaluation curves below. Models from my submissions are highlig
 <img src="img/results_test.png" width="800" height="450" />
 
 # Models
-Since the UCCS Dataset is not public at the moment, the trained models will not be released as every single one of them was trained using licensed data.
+Since the UCCS Dataset is not public at the moment, the trained models will not be released as every single one of them was trained using proprietary data.
 Should the dataset become public in the future, I will reconsider publishing the models again.
 
 # Sources
@@ -47,3 +49,5 @@ Should the dataset become public in the future, I will reconsider publishing the
 - [Cambridge Dictionary](https://dictionary.cambridge.org/)
 - Sample video from [Pexels](https://www.pexels.com/video/video-of-people-walking-855564/)
 - [UCCS Watchlist Challenge](https://www.ifi.uzh.ch/en/aiml/challenge.html)
+- Summary paper on [Arxiv](https://arxiv.org/abs/2409.07220)
+- [Poster](watchlist_challenge_Poster.pdf) presented at [IJCB 2024](https://ijcb2024.ieee-biometrics.org/)
