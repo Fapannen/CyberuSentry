@@ -31,7 +31,7 @@ developing the project completely alone, from scratch, in my free time and using
 working facial recognition system in two months is considered a success in my eyes. I am confident that I could improve the results, had we been
 given some more time.
 
-You can find the evaluation curves below. Models from my submissions are highlighted in the red rectangle. For more details, please refer to the
+You can find the evaluation curves below. Models from my submissions are those beginning with the prefix `TR-`. For more details, please refer to the
 [summary paper](https://arxiv.org/abs/2409.07220)
 
 ### Validation results of the submitted models
